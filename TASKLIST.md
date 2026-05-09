@@ -9,13 +9,13 @@
 
 ## Now
 
-- [ ] 在真机上验证语音输入、TTS 播放与会话回包
-- [ ] 完善 Android 录音权限申请、失败提示与 speaking 状态反馈
+- [ ] 设计微信 bot + Hermes 的首版消息流与语音流
+- [ ] 明确微信 bot 首版依赖的接入方式与运行边界
+- [ ] 规划 bot bridge / Hermes / tutor logic 的模块拆分
+- [ ] 记录 Android 原型当前可复用资产与暂停点
 - [ ] 继续增强 backend tutor reply 逻辑
 - [ ] 给 session 增加完成态提示与简短复盘
 - [ ] 继续细化 Hermes orchestration 模块
-- [ ] 为 backend 增加更真实的会话状态持久化
-- [ ] 规划真实手机接入 backend 的 base URL 切换方式
 
 ## Upcoming
 

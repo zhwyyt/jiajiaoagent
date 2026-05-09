@@ -22,3 +22,4 @@ captures/
 # Local bridge runtime state
 backend/.bridge-state.json
 backend/.bridge-events.ndjson
+backend/.bridge-audio/

@@ -92,3 +92,13 @@ To roll back:
 4. do not set `JIAJIAOAGENT_BRIDGE_PS1`.
 
 Because the Hermes-side patch still falls back to the old bridge path when those env vars are absent, rollback stays simple.
+
+## QQ Voice Note
+
+For QQBot/NapCat runtime, native voice reply depends on the Hermes-side `qqbot.py` fast-path consuming audio files with `send_voice(...)`, not falling back to `send_document(...)`.
+
+When validating QQ voice reply:
+
+1. ensure bridge returns an audio file path;
+2. ensure `qqbot.py` routes audio-like suffixes such as `.silk`, `.amr`, `.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac` into `send_voice(...)`;
+3. only treat the path as successful when the QQ client shows a real voice message instead of a generic file attachment.

@@ -1,4 +1,5 @@
 import type { TopicContext } from "../types/session.js";
+import { getTopicContextById } from "./topicPack.js";
 
 export interface TopicRepository {
   getTopicContext(topicId: string): Promise<TopicContext>;
@@ -6,11 +7,6 @@ export interface TopicRepository {
 
 export class InMemoryTopicRepository implements TopicRepository {
   async getTopicContext(topicId: string): Promise<TopicContext> {
-    return {
-      topicId,
-      title: topicId.replace(/-/g, " "),
-      keyPatterns: ["I like ...", "This is my ..."],
-      completionSignals: ["child gives at least one full sentence"]
-    };
+    return getTopicContextById(topicId);
   }
 }

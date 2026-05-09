@@ -1,0 +1,8 @@
+{
+  "speechRatePreset": "normal",
+  "presets": {
+    "slow": -5,
+    "normal": 0,
+    "fast": 4
+  }
+}

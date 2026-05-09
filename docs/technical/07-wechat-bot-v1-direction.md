@@ -1,5 +1,18 @@
 # WeChat Bot V1 Direction
 
+## Status Note
+
+This document remains as an exploration record.
+
+It no longer defines the current V1 mainline.
+
+Current repository decision:
+
+- WeChat bot was explored deeply for voice input/output;
+- inbound text and partial voice-STT path were validated;
+- outbound native voice rendering did not become stable enough for V1;
+- the active mainline has now moved to `QQBot + Hermes + jiajiaoagent backend bridge`.
+
 ## Purpose
 
 This branch pivots the first trial version away from Android-first voice interaction and toward a WeChat bot entrypoint.
@@ -77,7 +90,7 @@ In scope:
 - inbound text support;
 - inbound voice support if bridge can access media reliably;
 - outbound text support;
-- outbound voice support if TTS pipeline is stable.
+- outbound voice support only after a SILK-based WeChat-native output path is confirmed stable.
 
 Out of scope for first WeChat-bot trial:
 
@@ -101,3 +114,17 @@ Out of scope for first WeChat-bot trial:
 1. Which WeChat bot runtime is preferred in this repo?
 2. Will voice STT/TTS be provided by Hermes-adjacent services or inside the bot bridge?
 3. Should V1 keep Android as a secondary prototype only, or continue maintaining both in parallel?
+
+## Latest Decision
+
+Current working boundary for the WeChat MVP:
+
+- keep `voice input + text output` as the usable first-trial path;
+- treat visible WeChat voice-bubble output as a follow-up milestone;
+- prefer a `TTS -> WAV -> SILK -> voice_item` route for that follow-up.
+
+## Superseded By
+
+For the current repository mainline, use:
+
+- `docs/technical/13-qqbot-v1-mainline.md`

@@ -37,6 +37,7 @@ export interface TurnStrategy {
   promptHint: string | null;
   shouldWrapUp: boolean;
   replyMode: "expand-answer" | "follow-up";
+  speakingMove: "naming" | "description" | "choice" | "detail" | "feeling" | "reason";
 }
 
 export interface ChildContext {
@@ -49,7 +50,16 @@ export interface ChildContext {
 export interface TopicContext {
   topicId: string;
   title: string;
+  openingMessage: string;
+  communicationGoal: string;
+  speakingMoves: Array<"naming" | "description" | "choice" | "detail" | "feeling" | "reason">;
+  keyVocabulary: string[];
   keyPatterns: string[];
+  sentenceStarters: string[];
+  starterQuestions: string[];
+  followUpQuestions: string[];
+  eitherOrPrompts: string[];
+  wrapupTargets: string[];
   completionSignals: string[];
 }
 

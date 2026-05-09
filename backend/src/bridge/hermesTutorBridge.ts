@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { encode as encodeSilk, getWavFileInfo } from "silk-wasm";
 import {
   buildStartSessionResponse,
   buildTurnResponse
@@ -23,6 +25,7 @@ interface SenderSessionState {
   sessionId: string;
   topicId: string;
   currentLevel: number;
+  speechRatePreset: string;
   turnIndex: number;
   recentTurns: TurnMessage[];
   updatedAt: string;
@@ -32,11 +35,42 @@ interface BridgeState {
   sessionsBySender: Record<string, SenderSessionState>;
 }
 
+interface BridgeReplyPayload {
+  ok: true;
+  handled: true;
+  replyText: string;
+  sessionId: string;
+  topicId: string;
+  promptHint: string | null;
+  shouldPlayTts: boolean;
+  isSessionComplete: boolean;
+  correction: {
+    enabled: boolean;
+    focus: string | null;
+    mode: "none" | "gentle";
+  };
+  files?: Array<{
+    path: string;
+    kind: "voice";
+    format: "silk" | "wav";
+    durationMs?: number;
+    playtimeSeconds?: number;
+  }>;
+}
+
 const DEFAULT_TOPIC_ID = "my-family";
 const DEFAULT_CHILD_ID = "trial-child-001";
 const DEFAULT_CURRENT_LEVEL = 2;
 const STATE_FILE = path.resolve(process.cwd(), ".bridge-state.json");
 const BRIDGE_LOG_FILE = path.resolve(process.cwd(), ".bridge-events.ndjson");
+const AUDIO_OUTPUT_DIR = path.resolve(process.cwd(), ".bridge-audio");
+const TTS_SCRIPT_FILE = path.resolve(process.cwd(), "scripts", "synthesize-bridge-tts.ps1");
+const TTS_CONFIG_FILE = path.resolve(process.cwd(), "..", "config", "tts-voice.json");
+
+interface TtsVoiceConfig {
+  speechRatePreset?: string;
+  presets?: Record<string, number>;
+}
 
 function parseArgs(argv: string[]): BridgeArgs {
   const parsed: BridgeArgs = {};
@@ -114,7 +148,292 @@ function buildSenderKey(input: BridgeInput): string {
   return `${input.source || "unknown"}:${input.senderId || "anonymous"}`;
 }
 
-function buildOpeningReplyPayload(start: StartSessionResponse) {
+function sanitizeFilePart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "anon";
+}
+
+function buildAudioOutputPath(
+  senderKey: string,
+  sessionId: string,
+  turnLabel: string,
+  extension: ".wav" | ".silk"
+): string {
+  const safeSenderKey = sanitizeFilePart(senderKey);
+  const safeSessionId = sanitizeFilePart(sessionId);
+  const safeTurnLabel = sanitizeFilePart(turnLabel);
+  const fileName = `${Date.now()}-${safeSenderKey}-${safeSessionId}-${safeTurnLabel}${extension}`;
+  fs.mkdirSync(AUDIO_OUTPUT_DIR, { recursive: true });
+  return path.join(AUDIO_OUTPUT_DIR, fileName);
+}
+
+function toWslPath(filePath: string): string {
+  const normalized = path.resolve(filePath);
+  const driveMatch = normalized.match(/^([A-Za-z]):\\(.*)$/);
+  if (!driveMatch) {
+    return normalized.replace(/\\/g, "/");
+  }
+
+  const drive = driveMatch[1].toLowerCase();
+  const rest = driveMatch[2].replace(/\\/g, "/");
+  return `/mnt/${drive}/${rest}`;
+}
+
+function loadTtsVoiceConfig(): { presetName: string; rate: number } {
+  const fallback = {
+    presetName: "slow",
+    rate: -2
+  };
+
+  try {
+    if (!fs.existsSync(TTS_CONFIG_FILE)) {
+      return fallback;
+    }
+
+    const raw = fs.readFileSync(TTS_CONFIG_FILE, "utf8");
+    const parsed = JSON.parse(raw) as TtsVoiceConfig;
+    const presetName = String(parsed.speechRatePreset || fallback.presetName);
+    const presets = parsed.presets ?? {};
+    const rate = Number.isFinite(presets[presetName]) ? Number(presets[presetName]) : fallback.rate;
+
+    return {
+      presetName,
+      rate
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function resolveSpeechRateConfig(
+  sessionSpeechRatePreset?: string
+): { presetName: string; rate: number } {
+  const fallback = loadTtsVoiceConfig();
+
+  try {
+    if (!fs.existsSync(TTS_CONFIG_FILE)) {
+      return fallback;
+    }
+
+    const raw = fs.readFileSync(TTS_CONFIG_FILE, "utf8");
+    const parsed = JSON.parse(raw) as TtsVoiceConfig;
+    const presets = parsed.presets ?? {};
+    const requestedPreset = String(sessionSpeechRatePreset || parsed.speechRatePreset || fallback.presetName);
+    const rate = Number.isFinite(presets[requestedPreset]) ? Number(presets[requestedPreset]) : fallback.rate;
+
+    return {
+      presetName: requestedPreset,
+      rate
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function parseSpeechRateCommand(text: string): { presetName: string; replyText: string } | null {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const slowPatterns = [
+    "改成慢",
+    "改成慢速",
+    "调慢",
+    "说慢一点",
+    "慢一点",
+    "用慢速",
+    "slow speed",
+    "speak slower",
+    "slower",
+    "slow"
+  ];
+  const normalPatterns = [
+    "改成正常",
+    "改回正常",
+    "正常语速",
+    "正常一点",
+    "用正常",
+    "normal speed",
+    "speak normally",
+    "normal"
+  ];
+  const fastPatterns = [
+    "改成快",
+    "改成快速",
+    "调快",
+    "说快一点",
+    "快一点",
+    "用快速",
+    "fast speed",
+    "speak faster",
+    "faster",
+    "fast"
+  ];
+
+  if (slowPatterns.some((pattern) => normalized.includes(pattern))) {
+    return {
+      presetName: "slow",
+      replyText: "Okay, I will speak more slowly now."
+    };
+  }
+
+  if (normalPatterns.some((pattern) => normalized.includes(pattern))) {
+    return {
+      presetName: "normal",
+      replyText: "Okay, I will use a normal speaking speed now."
+    };
+  }
+
+  if (fastPatterns.some((pattern) => normalized.includes(pattern))) {
+    return {
+      presetName: "fast",
+      replyText: "Okay, I will speak a little faster now."
+    };
+  }
+
+  return null;
+}
+
+function synthesizeSpeechToWave(text: string, outputPath: string, rate: number): void {
+  const textBase64 = Buffer.from(text, "utf8").toString("base64");
+  const outputPathBase64 = Buffer.from(outputPath, "utf8").toString("base64");
+  if (!fs.existsSync(TTS_SCRIPT_FILE)) {
+    throw new Error(`TTS script not found: ${TTS_SCRIPT_FILE}`);
+  }
+
+  const result = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      TTS_SCRIPT_FILE,
+      "-TextBase64",
+      textBase64,
+      "-OutputPathBase64",
+      outputPathBase64,
+      "-Rate",
+      String(rate)
+    ],
+    {
+      encoding: "utf8"
+    }
+  );
+
+  if (result.status !== 0) {
+    const stderr = result.stderr?.trim();
+    const stdout = result.stdout?.trim();
+    throw new Error(stderr || stdout || "PowerShell TTS failed");
+  }
+}
+
+async function convertWaveToSilk(
+  wavePath: string,
+  silkPath: string
+): Promise<{ durationMs: number; playtimeSeconds: number }> {
+  const waveBytes = fs.readFileSync(wavePath);
+  const wavInfo = getWavFileInfo(waveBytes);
+  const {
+    numberOfChannels,
+    sampleRate,
+    bitsPerSample
+  } = wavInfo.fmt;
+  const dataChunk = wavInfo.chunkInfo.find((chunk) => chunk.chunkId === "data");
+
+  if (!dataChunk) {
+    throw new Error("WAV data chunk not found");
+  }
+  if (numberOfChannels !== 1) {
+    throw new Error(`Expected mono WAV for SILK encode, got channels=${numberOfChannels}`);
+  }
+  if (bitsPerSample !== 16) {
+    throw new Error(`Expected 16-bit WAV for SILK encode, got bits=${bitsPerSample}`);
+  }
+
+  const pcmSource = waveBytes.subarray(
+    dataChunk.dataOffset,
+    dataChunk.dataOffset + dataChunk.dataLength
+  );
+  const targetSampleRate = 24000;
+
+  let pcmForEncode = pcmSource;
+  if (sampleRate !== targetSampleRate) {
+    const inputSamples = pcmSource.length / 2;
+    const outputSamples = Math.max(
+      1,
+      Math.round((inputSamples * targetSampleRate) / sampleRate)
+    );
+    const resampled = Buffer.alloc(outputSamples * 2);
+
+    for (let outputIndex = 0; outputIndex < outputSamples; outputIndex += 1) {
+      const sourcePosition = (outputIndex * sampleRate) / targetSampleRate;
+      const leftIndex = Math.floor(sourcePosition);
+      const rightIndex = Math.min(leftIndex + 1, inputSamples - 1);
+      const fraction = sourcePosition - leftIndex;
+      const leftValue = pcmSource.readInt16LE(leftIndex * 2);
+      const rightValue = pcmSource.readInt16LE(rightIndex * 2);
+      const interpolated = Math.round(leftValue + (rightValue - leftValue) * fraction);
+      resampled.writeInt16LE(interpolated, outputIndex * 2);
+    }
+
+    pcmForEncode = resampled;
+  }
+
+  const result = await encodeSilk(pcmForEncode, targetSampleRate);
+  const silkBytes = Buffer.from(result.data);
+  fs.writeFileSync(silkPath, silkBytes);
+
+  const durationMs = Math.max(1, Math.round(result.duration));
+  const playtimeSeconds = Math.max(1, Math.round(durationMs / 1000));
+  return {
+    durationMs,
+    playtimeSeconds
+  };
+}
+
+async function attachVoiceFile(
+  payload: BridgeReplyPayload,
+  senderKey: string,
+  turnLabel: string,
+  speechRatePreset?: string
+): Promise<BridgeReplyPayload> {
+  if (!payload.shouldPlayTts || !payload.replyText.trim()) {
+    return payload;
+  }
+
+  try {
+    const wavePath = buildAudioOutputPath(senderKey, payload.sessionId, turnLabel, ".wav");
+    const silkPath = buildAudioOutputPath(senderKey, payload.sessionId, turnLabel, ".silk");
+    const ttsVoiceConfig = resolveSpeechRateConfig(speechRatePreset);
+    synthesizeSpeechToWave(payload.replyText, wavePath, ttsVoiceConfig.rate);
+    const { durationMs, playtimeSeconds } = await convertWaveToSilk(wavePath, silkPath);
+    return {
+      ...payload,
+      files: [
+        {
+          path: toWslPath(silkPath),
+          kind: "voice",
+          format: "silk",
+          durationMs,
+          playtimeSeconds
+        }
+      ]
+    };
+  } catch (error: unknown) {
+    appendBridgeLog({
+      type: "tts_generation_failed",
+      senderKey,
+      sessionId: payload.sessionId,
+      topicId: payload.topicId,
+      turnLabel,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return payload;
+  }
+}
+
+function buildOpeningReplyPayload(start: StartSessionResponse): BridgeReplyPayload {
   return {
     ok: true,
     handled: true,
@@ -136,7 +455,7 @@ function buildTurnReplyPayload(
   sessionId: string,
   topicId: string,
   turn: TurnResponse
-) {
+): BridgeReplyPayload {
   return {
     ok: true,
     handled: true,
@@ -187,6 +506,7 @@ async function ensureSession(
     sessionId: start.sessionId,
     topicId: start.topicId,
     currentLevel: input.currentLevel ?? DEFAULT_CURRENT_LEVEL,
+    speechRatePreset: loadTtsVoiceConfig().presetName,
     turnIndex: 0,
     recentTurns: [{ speaker: "agent", text: start.openingMessage }],
     updatedAt: new Date().toISOString()
@@ -227,26 +547,71 @@ async function run() {
   const { senderKey, session, openingPayload } = await ensureSession(input, state, createContainer);
 
   if (!input.text) {
+    const responsePayload = await attachVoiceFile(
+      openingPayload ?? buildOpeningReplyPayload({
+        sessionId: session.sessionId,
+        topicId: session.topicId,
+        openingMessage: session.recentTurns[0]?.text || "",
+        suggestedReplyMode: "simple-question"
+      }),
+      senderKey,
+      "opening",
+      session.speechRatePreset
+    );
     appendBridgeLog({
       type: "opening_reply",
       senderKey,
       sessionId: session.sessionId,
       topicId: session.topicId,
-      replyText: openingPayload?.replyText ?? session.recentTurns[0]?.text ?? ""
+      replyText: responsePayload.replyText,
+      files: responsePayload.files ?? []
     });
-    process.stdout.write(
-      `${JSON.stringify(openingPayload ?? buildOpeningReplyPayload({
-        sessionId: session.sessionId,
-        topicId: session.topicId,
-        openingMessage: session.recentTurns[0]?.text || "",
-        suggestedReplyMode: "simple-question"
-      }), null, 2)}\n`
-    );
+    process.stdout.write(`${JSON.stringify(responsePayload, null, 2)}\n`);
     return;
   }
 
   const container = await createContainer();
   const nextTurnIndex = session.turnIndex + 1;
+  const speechRateCommand = parseSpeechRateCommand(input.text);
+
+  if (speechRateCommand) {
+    session.speechRatePreset = speechRateCommand.presetName;
+    session.updatedAt = new Date().toISOString();
+    state.sessionsBySender[senderKey] = session;
+    saveState(state);
+
+    const payload = await attachVoiceFile(
+      {
+        ok: true,
+        handled: true,
+        replyText: speechRateCommand.replyText,
+        sessionId: session.sessionId,
+        topicId: session.topicId,
+        promptHint: "You can change the speed again by saying slow, normal, or fast.",
+        shouldPlayTts: true,
+        isSessionComplete: false,
+        correction: {
+          enabled: false,
+          focus: null,
+          mode: "none"
+        }
+      },
+      senderKey,
+      `speed-${speechRateCommand.presetName}`,
+      session.speechRatePreset
+    );
+
+    appendBridgeLog({
+      type: "speech_rate_changed",
+      senderKey,
+      sessionId: session.sessionId,
+      topicId: session.topicId,
+      presetName: speechRateCommand.presetName
+    });
+
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return;
+  }
 
   session.recentTurns.push({ speaker: "child", text: input.text });
 
@@ -272,7 +637,12 @@ async function run() {
   }
   saveState(state);
 
-  const payload = buildTurnReplyPayload(session.sessionId, session.topicId, turn);
+  const payload = await attachVoiceFile(
+    buildTurnReplyPayload(session.sessionId, session.topicId, turn),
+    senderKey,
+    `turn-${nextTurnIndex}`,
+    session.speechRatePreset
+  );
   appendBridgeLog({
     type: "turn_reply",
     senderKey,
@@ -281,7 +651,8 @@ async function run() {
     turnIndex: nextTurnIndex,
     inputText: input.text,
     replyText: turn.agentReplyText,
-    isSessionComplete: turn.isSessionComplete
+    isSessionComplete: turn.isSessionComplete,
+    files: payload.files ?? []
   });
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }

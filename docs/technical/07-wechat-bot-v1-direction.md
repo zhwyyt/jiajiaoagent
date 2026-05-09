@@ -10,6 +10,19 @@ The goal is to validate:
 2. whether Hermes can coordinate the tutoring flow behind a bot bridge;
 3. whether voice input/output can be handled through the bot channel more reliably than the current Android device-side path.
 
+## Local Runtime Fact
+
+This machine already has a Hermes-related workspace at `I:\hermes`.
+
+Current findings:
+
+1. `I:\hermes\weixin.py` contains a mature Weixin platform adapter.
+2. `I:\hermes\hermes-edit\qqbot.py` contains an existing QQ bot platform adapter.
+3. `I:\hermes\autoribao-bridge\autoribao-bridge.cjs` is a fast-path bridge currently designed for the old `autoribao` flow.
+4. A legacy bot process is still running on this machine and should be disconnected before switching the runtime target to `jiajiaoagent`.
+
+Because of that, V1 should prefer reusing the installed Hermes platform capabilities and swapping the business bridge target, instead of rebuilding the whole bot transport layer from scratch.
+
 ## V1 Entry Flow
 
 Preferred V1 flow:

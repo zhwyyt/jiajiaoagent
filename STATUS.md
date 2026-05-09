@@ -173,6 +173,10 @@
 - 保留 Android 原型作为已验证的文本联调基线
 - 准备切换首版交互入口到微信 bot + Hermes
 - 准备重新定义 V1 的语音输入输出链路
+- 已确认本机存在可复用 Hermes 安装：`I:\hermes`
+- 已确认本机仍有旧 bot 进程在运行，后续切换前需要安全断开
+- 已在 `backend/` 内落首版 Hermes 可调用 tutor bridge 骨架
+- 已验证 bridge 可按 `senderId` 维持最小会话连续性
 
 ## Next Step
 
@@ -180,9 +184,9 @@
 
 1. 优化首轮对话策略，让 Tutor 能做更稳定的追问、鼓励和轻纠错
 2. 设计微信 bot 作为首版交互入口的消息流与语音流
-3. 规划 Hermes 与微信 bot 的桥接模块边界
-4. 补充 session 完成态、复盘提示与训练计划入口衔接
-5. 明确 Android 原型后续保留范围
+3. 规划 Hermes 与微信 bot 的桥接模块边界，并明确复用 `I:\hermes` 的方式
+4. 将 Hermes 现有 bridge 从旧业务切换到 `jiajiaoagent` tutor bridge
+5. 补充 session 完成态、复盘提示与训练计划入口衔接
 
 ## Current Risks
 
@@ -199,6 +203,8 @@
 9. Android 构建当前可成功通过，但存在 `compileSdk = 36` 与 AGP 8.7.3 的兼容性警告，后续建议升级
 10. 一加 9 真机上的系统语音输入与 TTS 初始化兼容性存在明显不确定性
 11. 若切换微信 bot 作为 V1 入口，需要重新明确语音消息转写、回放和账号侧约束
+12. 本机 Hermes 当前可能仍指向旧业务桥接逻辑，切换时需要避免影响原流程
+13. 当前 tutor bridge 仍使用本地文件维护 sender-session 映射，后续需再决定是否并入 Redis
 
 ## Last Updated
 

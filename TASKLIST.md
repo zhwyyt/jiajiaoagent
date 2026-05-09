@@ -12,6 +12,10 @@
 - [ ] 设计微信 bot + Hermes 的首版消息流与语音流
 - [ ] 明确微信 bot 首版依赖的接入方式与运行边界
 - [ ] 规划 bot bridge / Hermes / tutor logic 的模块拆分
+- [ ] 盘点 `I:\hermes` 中可直接复用的 Weixin / QQ bot 能力
+- [ ] 确认并断开旧 bot 进程与旧 bridge 指向
+- [ ] 将 Hermes 现有 bridge 调整为调用 `jiajiaoagent` tutor bridge
+- [ ] 明确 bridge 中 voice STT / TTS 的责任归属
 - [ ] 记录 Android 原型当前可复用资产与暂停点
 - [ ] 继续增强 backend tutor reply 逻辑
 - [ ] 给 session 增加完成态提示与简短复盘
@@ -71,3 +75,4 @@
 - [x] 将 Android 页面接入真实会话状态流
 - [x] 细化 backend 首批会话接口到可试用对话水平
 - [x] 打通手机通过 Tailscale 访问本机 backend 的测试链路
+- [x] 在 backend 内落首版 Hermes 可调用 tutor bridge 骨架

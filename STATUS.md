@@ -2,11 +2,11 @@
 
 ## Project
 
-小学生英语口语陪练 Agent（Android MVP）
+小学生英语口语陪练 Agent（Android 原型 + 微信/Hermes Bot V1）
 
 ## Current Stage
 
-当前处于：`implementation` 已启动，已完成技术选型定稿与项目目录骨架初始化。
+当前处于：`implementation` 持续推进中，已从 Android 原型验证延伸到微信/Hermes Bot V1 切换准备。
 
 对应工作流文档：
 - `docs/superpower/00-workflow-status.md`
@@ -20,6 +20,10 @@
 - `docs/technical/04-postgresql-schema-draft.md`
 - `docs/technical/05-redis-session-state-draft.md`
 - `docs/technical/06-hermes-orchestration-modules.md`
+- `docs/technical/07-wechat-bot-v1-direction.md`
+- `docs/technical/08-hermes-tutor-bridge-skeleton.md`
+- `docs/technical/09-hermes-switch-over-notes.md`
+- `docs/technical/10-hermes-runtime-switch-runbook.md`
 
 ## What Is Done
 
@@ -142,29 +146,59 @@
    - 已产出调试包 `app/app/build/outputs/apk/debug/app-debug.apk`
 
 26. 已启动本机 backend mock 服务
-    - 已新增一键启动与健康检查脚本
-    - backend 当前可在 `http://127.0.0.1:8787/health` 返回正常
+   - 已新增一键启动与健康检查脚本
+   - backend 当前可在 `http://127.0.0.1:8787/health` 返回正常
 
 27. 已完成 Android 与 backend 的最小真实联调
-    - 模拟器内已可启动 session
-    - 已可发送文本 turn 并收到 backend 返回
-    - 当前可在无麦克风场景下用文本输入验证主流程
+   - 模拟器内已可启动 session
+   - 已可发送文本 turn 并收到 backend 返回
+   - 当前可在无麦克风场景下用文本输入验证主流程
 
 28. 已将 Android 对话页推进为真实消息流
-    - 已将开场白、孩子发言、Tutor 回复统一进入消息列表
-    - 已将对话页改为滚动聊天记录而非单条占位卡片
-    - 已保留语音输入与文本输入双通道
+   - 已将开场白、孩子发言、Tutor 回复统一进入消息列表
+   - 已将对话页改为滚动聊天记录而非单条占位卡片
+   - 已保留语音输入与文本输入双通道
 
 29. 已将 backend 回复逻辑推进到首版 tutor 风格
-    - 已根据回答长短判断是否要求完整句
-    - 已加入句式起手提示与家庭主题词汇引导
-    - 已让开场白与追问更接近儿童英语口语陪练
+   - 已根据回答长短判断是否要求完整句
+   - 已加入句式起手提示与家庭主题词汇引导
+   - 已让开场白与追问更接近儿童英语口语陪练
 
 30. 已打通真机经 Tailscale 访问本地 backend 的测试链路
-    - 已完成电脑端与手机端 Tailscale 登录与连接
-    - 已确认手机可访问 `http://100.101.3.116:8787/health`
-    - 已将 Android debug 包 backend 地址切换到 Tailscale IP
-    - 已重新构建可用于真机测试的 `app-debug.apk`
+   - 已完成电脑端与手机端 Tailscale 登录与连接
+   - 已确认手机可访问 `http://100.101.3.116:8787/health`
+   - 已将 Android debug 包 backend 地址切换到 Tailscale IP
+   - 已重新构建可用于真机测试的 `app-debug.apk`
+
+31. 已在 backend 内落首版 Hermes 可调用 tutor bridge 骨架
+   - 已新增 `backend/src/bridge/hermesTutorBridge.ts`
+   - 已新增 `backend/scripts/invoke-hermes-tutor-bridge.ps1`
+   - 已验证 bridge 可按 `senderId` 维持最小会话连续性
+
+32. 已为 `I:\hermes` 的 Weixin / QQ 适配器补充可切换开关
+   - 已补丁 `I:\hermes\weixin.py`
+   - 已补丁 `I:\hermes\hermes-edit\qqbot.py`
+   - 已确认通过环境变量可将 Hermes fast-path 指向 `jiajiaoagent`
+
+33. 已确认旧 Hermes / NapCat 运行入口的实际来源
+   - 已定位旧 `node src\qq-bot-napcat.js` 对应目录为 `I:\autoweb\autoribao`
+   - 已确认其启动脚本为 `I:\autoweb\autoribao\start-qq-bot-napcat.bat`
+   - 已确认当前切换应围绕 `autoribao` NapCat 入口进行
+
+34. 已补充 Hermes 切换运行脚本与 runbook
+   - 已新增 `scripts\Test-HermesTutorBridge.ps1`
+   - 已新增 `scripts\Start-HermesJiajiaoAgentNapCat.ps1`
+   - 已新增 `docs/technical/10-hermes-runtime-switch-runbook.md`
+
+35. 已完成新的本地 bridge 自检
+   - 已从仓库根目录成功执行 `scripts\Test-HermesTutorBridge.ps1`
+   - 已修复 `backend/scripts/invoke-hermes-tutor-bridge.ps1` 对调用目录的隐式依赖
+   - 已确认 bridge 包装脚本现在可稳定输出 tutor JSON
+
+36. 已完成旧 NapCat 运行时的替换启动
+   - 已停止旧的 Node 进程 `21128`
+   - 已通过 `scripts/Start-HermesJiajiaoAgentNapCat.ps1` 拉起新的后台运行实例
+   - 已确认新 Node 进程命令行为 `src\qq-bot-napcat.js`
 
 ## In Progress
 
@@ -174,19 +208,19 @@
 - 准备切换首版交互入口到微信 bot + Hermes
 - 准备重新定义 V1 的语音输入输出链路
 - 已确认本机存在可复用 Hermes 安装：`I:\hermes`
-- 已确认本机仍有旧 bot 进程在运行，后续切换前需要安全断开
-- 已在 `backend/` 内落首版 Hermes 可调用 tutor bridge 骨架
-- 已验证 bridge 可按 `senderId` 维持最小会话连续性
+- 已确认本机仍有旧 bot 进程在运行，且高概率来自 `I:\autoweb\autoribao`
+- 已确认新的本地 bridge 自检已通过，已具备切换前置条件
+- 已完成新的启动脚本切换，正在等待真实消息回路验证
 
 ## Next Step
 
 下一步：
 
-1. 优化首轮对话策略，让 Tutor 能做更稳定的追问、鼓励和轻纠错
-2. 设计微信 bot 作为首版交互入口的消息流与语音流
-3. 规划 Hermes 与微信 bot 的桥接模块边界，并明确复用 `I:\hermes` 的方式
-4. 将 Hermes 现有 bridge 从旧业务切换到 `jiajiaoagent` tutor bridge
-5. 补充 session 完成态、复盘提示与训练计划入口衔接
+1. 验证真实消息是否能从 bot 进入 tutor bridge 并返回
+2. 明确当前 bot 通道的语音消息输入输出能力与限制
+3. 优化首轮对话策略，让 Tutor 能做更稳定的追问、鼓励和轻纠错
+4. 补充 session 完成态、复盘提示与训练计划入口衔接
+5. 决定 bridge sender-session 状态是否并入 Redis
 
 ## Current Risks
 
@@ -205,6 +239,8 @@
 11. 若切换微信 bot 作为 V1 入口，需要重新明确语音消息转写、回放和账号侧约束
 12. 本机 Hermes 当前可能仍指向旧业务桥接逻辑，切换时需要避免影响原流程
 13. 当前 tutor bridge 仍使用本地文件维护 sender-session 映射，后续需再决定是否并入 Redis
+14. `I:\hermes` 的外部补丁当前不在 `jiajiaoagent` Git 仓库中，需要靠切换说明文档进行追踪
+15. 旧 NapCat 进程当前尚未完成无损切换验证，真正断开前仍需做一次实机消息回路确认
 
 ## Last Updated
 

@@ -25,9 +25,21 @@ $payload = @{
 $payloadBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($payload))
 
 $nodeCommand = Get-Command node -ErrorAction Stop
+$backendRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$tsxCliPath = Join-Path $backendRoot "node_modules\tsx\dist\cli.mjs"
 $scriptPath = Join-Path $PSScriptRoot '..\src\bridge\hermesTutorBridge.ts'
 
-& $nodeCommand.Source '.\node_modules\tsx\dist\cli.mjs' $scriptPath --input-json-base64 $payloadBase64
+if (-not (Test-Path -LiteralPath $tsxCliPath)) {
+    throw "tsx CLI not found: $tsxCliPath"
+}
+
+Push-Location $backendRoot
+try {
+    & $nodeCommand.Source $tsxCliPath $scriptPath --input-json-base64 $payloadBase64
+} finally {
+    Pop-Location
+}
+
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

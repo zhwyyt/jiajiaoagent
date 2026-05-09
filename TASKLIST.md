@@ -9,12 +9,10 @@
 
 ## Now
 
+- [ ] 验证真实消息是否已进入 `jiajiaoagent` tutor bridge
 - [ ] 设计微信 bot + Hermes 的首版消息流与语音流
 - [ ] 明确微信 bot 首版依赖的接入方式与运行边界
 - [ ] 规划 bot bridge / Hermes / tutor logic 的模块拆分
-- [ ] 盘点 `I:\hermes` 中可直接复用的 Weixin / QQ bot 能力
-- [ ] 确认并断开旧 bot 进程与旧 bridge 指向
-- [ ] 将 Hermes 现有 bridge 调整为调用 `jiajiaoagent` tutor bridge
 - [ ] 明确 bridge 中 voice STT / TTS 的责任归属
 - [ ] 记录 Android 原型当前可复用资产与暂停点
 - [ ] 继续增强 backend tutor reply 逻辑
@@ -76,3 +74,8 @@
 - [x] 细化 backend 首批会话接口到可试用对话水平
 - [x] 打通手机通过 Tailscale 访问本机 backend 的测试链路
 - [x] 在 backend 内落首版 Hermes 可调用 tutor bridge 骨架
+- [x] 为本机 `I:\hermes` 适配器补充可切换到 `jiajiaoagent` 的开关
+- [x] 定位旧 `node src\qq-bot-napcat.js` 的高概率运行目录为 `I:\autoweb\autoribao`
+- [x] 补充 Hermes runtime 切换脚本和 runbook
+- [x] 用 `scripts/Test-HermesTutorBridge.ps1` 完成一次本地 bridge 自检
+- [x] 停掉旧 `autoribao` NapCat 运行实例并切到 `scripts/Start-HermesJiajiaoAgentNapCat.ps1`

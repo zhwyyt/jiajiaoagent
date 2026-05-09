@@ -36,6 +36,7 @@ const DEFAULT_TOPIC_ID = "my-family";
 const DEFAULT_CHILD_ID = "trial-child-001";
 const DEFAULT_CURRENT_LEVEL = 2;
 const STATE_FILE = path.resolve(process.cwd(), ".bridge-state.json");
+const BRIDGE_LOG_FILE = path.resolve(process.cwd(), ".bridge-events.ndjson");
 
 function parseArgs(argv: string[]): BridgeArgs {
   const parsed: BridgeArgs = {};
@@ -101,6 +102,14 @@ function saveState(state: BridgeState) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf8");
 }
 
+function appendBridgeLog(event: Record<string, unknown>) {
+  const line = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...event
+  });
+  fs.appendFileSync(BRIDGE_LOG_FILE, `${line}\n`, "utf8");
+}
+
 function buildSenderKey(input: BridgeInput): string {
   return `${input.source || "unknown"}:${input.senderId || "anonymous"}`;
 }
@@ -150,6 +159,13 @@ async function ensureSession(
   const existing = state.sessionsBySender[senderKey];
 
   if (existing) {
+    appendBridgeLog({
+      type: "session_reused",
+      senderKey,
+      sessionId: existing.sessionId,
+      topicId: existing.topicId,
+      turnIndex: existing.turnIndex
+    });
     return {
       senderKey,
       session: existing,
@@ -178,6 +194,13 @@ async function ensureSession(
 
   state.sessionsBySender[senderKey] = created;
   saveState(state);
+  appendBridgeLog({
+    type: "session_created",
+    senderKey,
+    sessionId: created.sessionId,
+    topicId: created.topicId,
+    currentLevel: created.currentLevel
+  });
 
   return {
     senderKey,
@@ -204,6 +227,13 @@ async function run() {
   const { senderKey, session, openingPayload } = await ensureSession(input, state, createContainer);
 
   if (!input.text) {
+    appendBridgeLog({
+      type: "opening_reply",
+      senderKey,
+      sessionId: session.sessionId,
+      topicId: session.topicId,
+      replyText: openingPayload?.replyText ?? session.recentTurns[0]?.text ?? ""
+    });
     process.stdout.write(
       `${JSON.stringify(openingPayload ?? buildOpeningReplyPayload({
         sessionId: session.sessionId,
@@ -243,11 +273,25 @@ async function run() {
   saveState(state);
 
   const payload = buildTurnReplyPayload(session.sessionId, session.topicId, turn);
+  appendBridgeLog({
+    type: "turn_reply",
+    senderKey,
+    sessionId: session.sessionId,
+    topicId: session.topicId,
+    turnIndex: nextTurnIndex,
+    inputText: input.text,
+    replyText: turn.agentReplyText,
+    isSessionComplete: turn.isSessionComplete
+  });
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
 run().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
+  appendBridgeLog({
+    type: "bridge_error",
+    error: message
+  });
   process.stderr.write(
     `${JSON.stringify({ ok: false, handled: false, error: message }, null, 2)}\n`
   );

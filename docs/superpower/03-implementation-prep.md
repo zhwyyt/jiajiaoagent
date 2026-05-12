@@ -2,290 +2,235 @@
 
 ## Project
 
-小学生英语口语陪练 Agent（Android MVP）
+小学生英语口语陪练 Agent（QQBot 主试用链路 + Android 原型保留）
 
 ## 1. Goal
 
-本阶段目标是在正式编码前，把 MVP 开发计划进一步收敛为：
+本阶段目标是在正式持续实现前，把项目从“能跑通”收敛为“知道接下来该怎么稳定推进”。
 
-1. 可执行的任务拆解
-2. 首版技术栈建议
-3. 模块边界与数据结构草案
-4. 初始化项目结构建议
+当前 implementation-prep 的正式基线为：
+
+1. 明确当前主试用入口
+2. 明确 LLM、Hermes、数据层的职责边界
+3. 明确接下来应优先实现的治理、记忆与试用闭环
+4. 保证仓库内的计划和真实实现一致
 
 本阶段结束标准：
-- 开发任务可以按里程碑逐项推进
-- Android 客户端技术路线明确
-- 语音链路与 Agent 接入思路明确
-- 仓库结构可以开始初始化
 
-## 2. Task Breakdown
+- 主路径不再模糊
+- 架构职责边界明确
+- 下一阶段任务可以按模块逐步落地
+- 重要决策已写入仓库文件，而不是只留在聊天里
 
-### Track A: Project Foundation
+## 2. Current Mainline
 
-1. 初始化仓库目录结构
-2. 初始化 Android 项目
-3. 建立基础文档入口与 README
-4. 建立环境配置方案
-5. 确认 Hermes、PostgreSQL、Redis 的系统边界
+当前首版正式主路径为：
 
-### Track B: Android Client Shell
+`QQBot + NapCat + jiajiaoagent backend bridge + Hermes governance + LLM reply`
 
-1. 搭建 Android App 基础工程
-2. 建立主导航结构
-3. 完成首页基础 UI
-4. 完成对话页基础 UI
-5. 完成长页基础 UI
-6. 完成训练计划页基础 UI
+说明：
 
-### Track C: Voice Session Loop
+- QQBot 是当前最低摩擦试用入口
+- Android 原型仍保留，作为后续独立 App 方向的资产
+- 微信 bot 路线保留为历史探索记录，不是当前主线
 
-1. 接入录音入口
-2. 接入语音转文本
-3. 接入 Agent 文本回复
-4. 接入 TTS 播报
-5. 建立单轮会话状态流转
-6. 展示基本会话消息流
+## 3. Architecture Baseline
 
-### Track D: Guided Conversation
+当前项目正式按以下原则推进：
 
-1. 设计主题配置结构
-2. 实现主题选择或推荐逻辑
-3. 实现回合推进逻辑
-4. 实现轻纠错策略
-5. 实现卡壳提示支架
-6. 实现会话结束判断
+### 3.1 LLM Owns The Main Reply
 
-### Track D2: Hermes Orchestration
+LLM 应负责：
 
-1. 定义 Hermes 调度边界
-2. 定义会话状态注入结构
-3. 定义记忆注入结构
-4. 定义训练计划触发时机
-5. 定义 MVP 阶段的 agent 逻辑拆分
+- 理解孩子真实意思
+- 自然接话
+- 接住情绪和卡壳
+- 支持中英混输
+- 在真实聊天里柔和引导表达训练
 
-### Track E: Profile and Planning
+### 3.2 Hermes Owns Governance
 
-1. 设计会话摘要结构
-2. 设计成长画像结构
-3. 实现基础画像更新逻辑
-4. 实现训练计划生成输入结构
-5. 实现训练计划输出结构
-6. 在客户端展示训练计划与成长状态
+Hermes / backend 应负责：
 
-### Track F: Trial and Verification
+- quick intent
+- command parsing
+- session lifecycle
+- restart / reset
+- memory tagging
+- profile injection
+- topic soft guidance
+- wrap-up gating
+- output constraints
 
-1. 准备试用主题内容
-2. 准备测试账号或测试模式
-3. 验证主流程稳定性
-4. 收集试用反馈
-5. 记录下一轮迭代输入
+### 3.3 Data Layer Owns Continuity
 
-## 3. Recommended Tech Stack
+- PostgreSQL：长期画像、训练记录、问题标签、训练计划
+- Redis：短期会话态、当前策略态、turn 级上下文
 
-## 3.1 Android Client
+## 4. Updated Task Breakdown
 
-建议：
-- Kotlin
-- Jetpack Compose
-- Navigation Compose
-- ViewModel
-- Kotlin Coroutines
+### Track A: Runtime Mainline Stability
 
-理由：
-- 适合快速搭建 Android MVP
-- UI 搭建效率高
-- 状态管理和页面结构更清晰
-- 方便后续迭代和组件复用
+1. 固化 QQBot 主试用链路
+2. 保持可重启、可观察、可定位问题
+3. 继续验证语音输入输出体验
+4. 保留 Android 原型资产和暂停点说明
 
-## 3.2 Local Storage
+### Track B: LLM Conversation Quality
 
-建议：
-- DataStore 用于轻量设置和偏好
-- Room 视需求用于本地会话摘要缓存
+1. 定义 LLM prompt contract
+2. 优化 system prompt 与 user prompt 结构
+3. 保证前几轮先自然聊天
+4. 控制回复长度、追问密度和儿童口语感
+5. 支持中英混杂输入后的自然承接
 
-第一版建议：
-- 能轻则轻
-- 如果首版只需轻量缓存，可先用内存状态 + DataStore
-- 若要保留最近会话和画像快照，再加 Room
+### Track C: Hermes Governance Layer
 
-## 3.3 Voice Input / Speech-to-Text
+1. 固化 quick intent 边界
+2. 固化 command 解析边界
+3. 设计 turn strategy 的最小治理输入输出
+4. 设计 wrap-up 允许 / 禁止条件
+5. 设计 restart 后新会话的最小状态清理
 
-第一版建议路线：
+### Track D: Memory And Learning Signals
 
-优先采用平台能力或成熟云服务，不要在 MVP 阶段自研语音识别。
+1. 定义 child profile 可持续字段
+2. 定义 issue tags
+3. 定义每轮对话的 memory extraction 规则
+4. 定义 session summary 何时生成
+5. 定义训练重点如何回注入后续回合
 
-可选方向：
-- Android 平台语音识别能力
-- 云端语音识别服务
+### Track E: Trial Loop
 
-选择标准：
-- 儿童语音容错
-- 英语识别效果
-- Android 集成复杂度
-- 成本和可试用性
+1. 准备真实试用脚本
+2. 记录孩子是否愿意持续开口
+3. 记录哪些回复让人出戏
+4. 记录哪些追问能引出更多表达
+5. 用试用结果反推 prompt / governance 调整
 
-建议策略：
-- 第一版先选“最容易打通链路”的方案
-- 重点验证孩子是否愿意说、系统是否能大致听懂
+## 5. Recommended Technical Focus
 
-## 3.4 Text-to-Speech
+## 5.1 Conversation Runtime
 
-建议：
-- Android 原生 TTS 作为首版起点
+建议继续保持：
+
+- Node.js / TypeScript backend
+- QQBot / NapCat 作为当前 transport mainline
+- OpenAI-compatible LLM 接口
 
 理由：
-- 接入快
-- 成本低
-- 足够支撑 MVP 体验验证
 
-后续若体验不足，再替换更自然的语音服务。
+- 当前已经跑通
+- 修改成本低
+- 最适合继续验证对话质量本身
 
-## 3.5 Agent Service
+## 5.2 Hermes Role
 
-建议：
-- 采用独立 Agent 服务层
-- 由服务层负责主题编排、回复生成、纠错建议、画像更新和训练计划生成
-- Hermes 作为 agent orchestration 层
+Hermes 当前不再继续扩展为“主回复模板引擎”。
 
-第一版可以接受：
-- 轻量 API 服务
-- 单服务承担对外 API 与数据处理
-- Hermes 负责内部调度与逻辑编排
+建议重点投入在：
 
-## 3.6 Persistence and Coordination
+- session routing
+- strategy injection
+- memory coordination
+- wrap-up / summary trigger
+- observability
 
-建议：
-- PostgreSQL 作为主数据库
-- Redis 作为短期状态与协调层
+## 5.3 Android Role
 
-职责建议：
-- PostgreSQL：学生档案、主题配置、会话摘要、成长画像、训练计划
-- Redis：活跃会话态、临时上下文、短期缓存、幂等与后续可扩展协调能力
+Android 当前作为：
 
-## 3.7 Backend Language
+- 已验证过的产品原型
+- 后续专属 App 的设计和交互资产
+- 不阻塞当前试用主线
 
-建议优先级：
+所以本阶段不建议再把主要精力放回 Android 基础链路问题上。
 
-1. 选择团队最熟悉、能最快交付的语言
-2. 保证接 AI 能力和数据结构方便
-3. 保持首版实现简单
+## 6. Suggested Repository Focus
 
-在未限定团队栈的情况下，建议候选：
-- Node.js / TypeScript
-- Python
+当前建议重点维护：
 
-如果目标是尽快做出 Agent 编排与接口原型，二者都合适。
+- `backend/` 当前主逻辑
+- `docs/technical/` 架构与实现边界
+- `docs/superpower/` 工作流状态与阶段产物
+- `STATUS.md`
+- `TASKLIST.md`
 
-## 4. Proposed Repository Structure
+Android 工程继续保留，但暂不作为当前第一优先级。
 
-建议初始化为：
+## 7. Data Structure Prep Focus
 
-- `app/` Android 客户端
-- `docs/` 文档
-- `backend/` Agent 服务
-- `assets/` 静态资源
-- `scripts/` 开发辅助脚本
+本阶段最值得尽快定下来的，不是再加 transport，而是以下结构：
 
-后续可按需要补充：
-- `tests/`
-- `tools/`
+### 7.1 Memory Tag
 
-## 5. Data Structure Draft
+建议至少支持：
 
-## 5.1 Topic Definition
+- afraid_to_speak
+- shy_in_class
+- needs_cn_bridge
+- output_block_after_vocab
+- prefers_free_chat
+- favorite_topics
 
-每个主题至少包含：
-- topic id
-- title
-- target age range
-- target level range
-- learning goals
-- key vocabulary
-- key sentence patterns
-- starter questions
-- follow-up questions
-- common mistakes
-- completion signals
+### 7.2 Session Summary
 
-## 5.2 Session Summary
+建议至少记录：
 
-建议字段：
 - session id
-- child id
-- topic id
-- started at
-- ended at
-- turn count
-- child utterance count
-- average child response length
-- highlighted correction points
-- topic completion result
-- next practice hints
+- child id / sender id
+- main emotional state
+- main speaking bottleneck
+- useful successful prompt
+- whether child expanded naturally
+- next practice hint
 
-## 5.3 Growth Profile
+### 7.3 Prompt Contract
 
-建议字段：
-- child id
-- current speaking level
-- recent topic history
-- recent strengths
-- common mistake patterns
-- response length trend
-- practice frequency
-- current focus areas
-- latest generated plan summary
+建议明确：
 
-## 5.4 Training Plan
+- system prompt 固定职责
+- strategy 注入字段
+- topic soft-guide 注入字段
+- memory summary 注入字段
+- output JSON contract
 
-建议字段：
-- plan id
-- child id
-- generated at
-- period type
-- goals
-- focus topics
-- focus sentence patterns
-- practice suggestions
-- encouragement note
+## 8. Suggested Development Order
 
-## 6. Suggested Development Order
+建议按以下顺序推进：
 
-建议先按“能跑通主链路”的优先级推进：
+1. 固化 LLM prompt contract
+2. 固化 Hermes rule boundary
+3. 增加 memory update engine
+4. 增加 session summary / issue tagging
+5. 做真实儿童试用并记录反馈
+6. 再根据结果决定是否回头加强 Android 主入口
 
-1. Android 工程初始化
-2. 基础页面与导航
-3. 语音输入和 TTS
-4. Agent 基础对话接口
-5. 会话消息流
-6. 主题对话控制
-7. 会话摘要
-8. 训练计划展示
-9. 画像更新
+## 9. Decisions To Make Next
 
-## 7. Decisions To Make Next
+接下来最值得单独讨论并拍板的决定：
 
-接下来最需要尽快拍板的决定：
+1. quick intent 该保留到什么范围
+2. wrap-up 什么时候允许触发
+3. memory tag 的首版字段集合
+4. monthly training plan 在首版里做到什么深度
+5. 家长可见输出是否先只做简版摘要
 
-1. Android 客户端是否采用 Kotlin + Jetpack Compose
-2. 首版 STT 使用平台能力还是云服务
-3. 首版 STT 使用平台能力还是云服务
-4. 第一批主题是否固定为 8 到 10 个
-5. 首版本地存储是否只做轻缓存
+## 10. Output Of This Stage
 
-## 8. Output of This Stage
+本阶段产出应包括：
 
-本阶段产出：
+1. 更新 `docs/superpower/03-implementation-prep.md`
+2. 更新 `docs/superpower/00-workflow-status.md`
+3. 更新 `STATUS.md`
+4. 更新 `TASKLIST.md`
+5. 与技术架构文档保持一致
 
-1. `docs/superpower/03-implementation-prep.md`
-2. 更新 `STATUS.md`
-3. 更新 `TASKLIST.md`
+## 11. Next Step
 
-## 9. Next Step
+下一步建议进入：
 
-下一步优先进入：
-
-1. 项目结构初始化
-2. Android 技术栈确认
-3. Android 基础工程搭建
-4. Agent 服务技术路线确认
+1. LLM prompt contract planning
+2. Hermes governance boundary planning
+3. memory update engine planning
+4. child trial feedback loop planning

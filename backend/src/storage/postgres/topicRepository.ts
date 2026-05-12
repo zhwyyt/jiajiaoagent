@@ -1,10 +1,12 @@
 import type { Pool } from "pg";
 import type { TopicContext } from "../../types/session.js";
+import { getTopicContextById } from "../topicPack.js";
 
 export class PostgresTopicRepository {
   constructor(private readonly pool: Pool) {}
 
   async getTopicContext(topicId: string): Promise<TopicContext> {
+    const fallback = getTopicContextById(topicId);
     const result = await this.pool.query(
       `
       SELECT id, title, key_patterns, completion_signals
@@ -15,12 +17,7 @@ export class PostgresTopicRepository {
     );
 
     if (result.rowCount === 0) {
-      return {
-        topicId,
-        title: topicId.replace(/-/g, " "),
-        keyPatterns: ["I like ...", "This is my ..."],
-        completionSignals: ["child gives at least one full sentence"]
-      };
+      return fallback;
     }
 
     const row = result.rows[0] as {
@@ -31,6 +28,7 @@ export class PostgresTopicRepository {
     };
 
     return {
+      ...fallback,
       topicId: row.id,
       title: row.title,
       keyPatterns: row.key_patterns,

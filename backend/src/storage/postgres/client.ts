@@ -12,3 +12,13 @@ export function getPostgresPool(): Pool {
 
   return pool;
 }
+
+export async function closePostgresPool(): Promise<void> {
+  if (!pool) {
+    return;
+  }
+
+  const activePool = pool;
+  pool = null;
+  await activePool.end();
+}

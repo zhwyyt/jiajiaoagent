@@ -18,3 +18,10 @@ captures/
 
 # Logs
 *.log
+
+# Local bridge runtime state
+backend/.bridge-state.json
+backend/.bridge-events.ndjson
+backend/.bridge-audio/
+backend/.learning-memory.json
+backend/.session-store.json

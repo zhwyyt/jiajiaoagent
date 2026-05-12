@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "mode": "whitelist-routing",
+  "defaultTarget": "ignore",
+  "notes": [
+    "This file defines QQ whitelist routing for the shared NapCat entrypoint.",
+    "Unmatched users should not fall through to another project by default."
+  ],
+  "targets": {
+    "autoribao": {
+      "userIds": [
+        "1647127576",
+        "794618446",
+        "584201119"
+      ]
+    },
+    "jiajiaoagent": {
+      "userIds": [
+        "963028199",
+        "497210274"
+      ]
+    }
+  }
+}

@@ -9,29 +9,37 @@
 
 ## Now
 
-- [ ] 在真机上验证语音输入、TTS 播放与会话回包
-- [ ] 完善 Android 录音权限申请、失败提示与 speaking 状态反馈
-- [ ] 继续增强 backend tutor reply 逻辑
-- [ ] 给 session 增加完成态提示与简短复盘
-- [ ] 继续细化 Hermes orchestration 模块
-- [ ] 为 backend 增加更真实的会话状态持久化
-- [ ] 规划真实手机接入 backend 的 base URL 切换方式
+- [ ] 连续进行 V1 live QQ 试用，确认文本 / 语音 / 家长报告链路在多轮消息下持续稳定
+- [ ] 设计真实试用观察表，记录“哪些回复自然、哪些回复尴尬、哪些追问能让孩子继续说”
+- [ ] 基于当前 planner 输出微调真实回复，避免“有规划但太像教学脚本”
+- [ ] 观察 `stage goal / session goal` 注入后，QQ 侧真实回复是否更稳定、更自然
+- [ ] 观察“理解难度自适应”在真实试聊里是否切换自然，不要一上来就过度中文托底
+- [ ] 观察 learner profile 注入后，live QQ 回复是否更像“越来越懂这个孩子”
+- [ ] 基于 `22-hidden-training-projection-v1` 继续微调 stageGoal / learnerProfile 到 runtime 行为的映射
+- [ ] 基于真实试聊微调家长报告的措辞、长度和信息密度
+- [ ] 接通真实 PostgreSQL 并执行 `npm run db:migrate`
+- [ ] 设计 children / topics 的 seed 或初始化策略
+- [ ] 基于 live QQ 试用验证当前 `quick intent` 收紧是否足够，必要时继续缩小范围
+- [ ] 基于 live QQ 试用验证当前 `wrap-up gating` 是否合适，必要时继续补条件
 
 ## Upcoming
 
-- [ ] 完成首页、成长页、训练计划页基础结构细化
-- [ ] 打磨对话页消息流视觉层次与交互细节
-- [ ] 设计主题配置结构
-- [ ] 设计训练计划生成输入输出格式
-- [ ] 初始化数据库迁移或 schema 管理方式
+- [ ] 重新梳理 `quick intent`，只保留真正高频且值得走规则层的意图
+- [ ] 设计 `wrap-up gating rules`，避免 LLM 正常接话时被总结话术打断
+- [ ] 扩充中英混杂容错的小词表与句型映射
+- [ ] 细化“没听懂 / 卡壳 / 纯中文求助”三类信号的切换阈值
+- [ ] 基于 live 试聊继续微调 learner profile 的 stable trait 慢更新阈值
+- [ ] 基于真实试用继续微调 tutor reply 的语气、追问密度和回合节奏
+- [ ] 验证更自然的 `-1 / 0 / 1` 语速档在 QQ 实机听感是否稳定
+- [ ] 记录 Android 原型当前可复用资产与暂停点
 
 ## Later
 
-- [ ] 实现主题式语音对话主流程
+- [ ] 实现主题式语音对话主流程的长期画像闭环
 - [ ] 实现轻纠错与复说引导机制
-- [ ] 实现基础成长画像数据结构
 - [ ] 实现训练计划生成逻辑
-- [ ] 完成 MVP 试用版联调
+- [ ] 实现周度 / 月度教学规划闭环
+- [ ] 评估是否恢复 Android 作为正式主入口
 - [ ] 记录试用反馈并整理下一轮迭代方向
 
 ## Done
@@ -71,3 +79,84 @@
 - [x] 将 Android 页面接入真实会话状态流
 - [x] 细化 backend 首批会话接口到可试用对话水平
 - [x] 打通手机通过 Tailscale 访问本机 backend 的测试链路
+- [x] 在 backend 内落首版 Hermes 可调用 tutor bridge 骨架
+- [x] 为本机 `I:\hermes` 适配器补充可切换到 `jiajiaoagent` 的开关
+- [x] 定位旧 `node src\qq-bot-napcat.js` 的高概率运行目录为 `I:\autoweb\autoribao`
+- [x] 补充 Hermes runtime 切换脚本和 runbook
+- [x] 用 `scripts/Test-HermesTutorBridge.ps1` 完成一次本地 bridge 自检
+- [x] 停掉旧 `autoribao` NapCat 运行实例并切到 `scripts/Start-HermesJiajiaoAgentNapCat.ps1`
+- [x] 确认首版真实目标入口应为 WSL 中的 Hermes 微信 bot
+- [x] 补充微信 Hermes 的一键检查 / 一键启动脚本骨架
+- [x] 校准 WSL 中 Hermes 的真实启动命令与目录
+- [x] 验证微信文本消息已可进入 `jiajiaoagent` tutor bridge
+- [x] 为 live `weixin.py` 补充首版微信语音 STT 尝试逻辑
+- [x] 将 WSL Ubuntu 修复逻辑并入一键启动脚本
+- [x] 定位到 `wsl.exe --list --quiet` 返回空字符文本导致 `Ubuntu` 比对失败
+- [x] 定位到当前 Codex 运行账户与用户真实 WSL 注册账户不一致
+- [x] 修正启动脚本里 Bash 变量被 PowerShell 提前解析的问题
+- [x] 确认 `Check-WeixinHermes.cmd` 已能识别 Ubuntu / Hermes / Weixin adapter 主链路
+- [x] 确认 `Start-WeixinHermes.cmd` 已可拉起 Hermes gateway 常驻运行
+- [x] 在 repo 内补上首版 bridge `.wav` 语音输出骨架
+- [x] 本地验证 bridge 已可生成 `.wav` 并在 JSON 中返回 `files`
+- [x] 定位到 bridge `files` 结构与 Weixin adapter 预期不一致
+- [x] 定位到 bridge 语音文件返回 Windows 路径导致 WSL `os.path.isfile(...)` 失败
+- [x] 将语音发送诊断日志补进 live WSL `weixin.py`
+- [x] 确认 `send_voice` 已成功调用但微信客户端仍不显示当前 `.wav` 语音输出
+- [x] 明确当前微信 MVP 边界先接受 `语音输入 + 文字输出`
+- [x] 写入微信语音输出 `.silk` 路线技术计划
+- [x] 在 backend 接入 `silk-wasm` 并完成本地 `.wav -> .silk` 原型
+- [x] 让 live Weixin adapter 消费 `playtimeSeconds` 元数据
+- [x] 确认当前 Weixin bot 路线不适合作为首版语音输出主路径
+- [x] 确认本机 QQBot 适配器存在原生 `send_voice()` 媒体发送链路
+- [x] 定位到 QQ fast-path 当前仍把音频文件按普通文档发送
+- [x] 将 QQ 音频 fast-path 补丁同步到 live WSL `qqbot.py`
+- [x] 修正 `22050 Hz` WAV 直接编码导致的 `.silk` 近似静音问题
+- [x] 验证 QQBot 已可向用户回发带声音的真实语音消息
+- [x] 增强 backend tutor reply 逻辑，让回复更像小学生口语陪练
+- [x] 给 session 增加完成态提示、简短复盘和下一步开口引导
+- [x] 设计首版日常口语主题包结构，并明确偏西方式表达训练方向
+- [x] 补上中英混杂输入的首版容错规则与最小实现
+- [x] 将 topicRepository 升级为静态首版主题包定义
+- [x] 让 opening message / follow-up 基于 topic config 变化
+- [x] 将主题包中的 speaking moves / scaffolds 映射到 turn strategy
+- [x] 整理一份可重复执行的儿童试用脚本
+- [x] 写下 NapCat 白名单路由规则与当前 4 个 QQ 的目标映射
+- [x] 将白名单路由补丁打入 live NapCat 入口代码
+- [x] 补上 NapCat 对 `jiajiaoagent` WSL 语音路径的转换修复
+- [x] 清理重复旧 NapCat 进程，只保留当前 live 实例
+- [x] 补上高频开场/求助意图的快速响应层
+- [x] 接入首版 TTS 三档语速配置
+- [x] 在 bridge 中接入首版语音/文本控制指令，用于切换 `slow / normal / fast` 语速
+- [x] 识别并修正默认语速已是 `slow` 导致“慢一点”体感无变化的问题
+- [x] 识别并开始修正“开场过早绑主题、像题库对话”的问题
+- [x] 修正 quick intent 误把 `white` 识别成 `hi` 的 false positive
+- [x] 修正孩子表达焦虑/紧张时仍被硬拐入预设主题的问题
+- [x] 查清 `CPA1 + gpt-5.4` 为何返回 200 但正文为空，并改为读取流式 chunk 正文
+- [x] 补上可观察的 `llm_succeeded / llm_failed / llm_skipped` 日志
+- [x] 为 QQ 单窗口补上 `重新开始聊天` 指令
+- [x] 修正 LLM 已成功回复但被 wrap-up 收尾话术覆盖的问题边界
+- [x] 明确当前正式架构方向为 “LLM 主回复、Hermes 做治理层”
+- [x] 将核心技术架构文档切到新方向
+- [x] 将 `docs/superpower/03-implementation-prep.md` 对齐到 “LLM 主回复、Hermes 做治理层”
+- [x] 将 `docs/superpower/00-workflow-status.md` 对齐到当前 QQBot 主试用链路
+- [x] 完成“教学规划 + 成长记录”功能层 brainstorming，并写入仓库文档
+- [x] 完成“阶段目标 + session 目标”机制设计初稿，并写入仓库文档
+- [x] 完成 `memory-update-engine / learning-planner / progress-evaluator` 的 V1 设计初稿
+- [x] 落 `memory update engine` 最小实现，并通过 `npm run check`
+- [x] 落 `progress evaluator / learning planner` 最小实现，并接入 runtime
+- [x] 完成 `LLM prompt contract / Hermes governance boundary` 文档
+- [x] 将 `quick intent` 收紧为更保守的独立短句匹配
+- [x] 为 `wrap-up` 补上首版显式 gating 规则
+- [x] 软化 planner 的 `weekly focus / session goal` 措辞，减少对 LLM 的脚本感牵引
+- [x] 接入首版“理解难度自适应”模式，并写入 prompt / strategy / memory / docs
+- [x] 完成“持续孩子画像系统 V1”设计初稿，并写入 `docs/technical/21-learner-profile-v1-design.md`
+- [x] 基于现有 `LearningSnapshot + SessionSummary` 接入首版 runtime learner profile 生成器
+- [x] 将 learner profile 软回注到 planner / prompt / strategy 运行时链路
+- [x] 补上 learner profile stable traits 的首版慢更新规则
+- [x] 完成“训练计划如何隐性投射到对话行为” V1 映射文档
+- [x] 完成 V1 家长报告结构设计
+- [x] 完成首版 parent report generator
+- [x] 支持 QQ 指令触发家长报告文字返回
+- [x] 接入 PostgreSQL learning memory repository 与 migration runner
+- [x] 形成 V1 阶段性完成度清单
+- [x] 修正 bridge CLI 在 Redis / PostgreSQL 正式模式下的资源收尾问题

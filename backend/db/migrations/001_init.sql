@@ -1,5 +1,5 @@
 CREATE TABLE children (
-    id UUID PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL,
     grade SMALLINT NOT NULL,
     english_level SMALLINT NOT NULL DEFAULT 1,
@@ -10,7 +10,7 @@ CREATE TABLE children (
 );
 
 CREATE TABLE child_preferences (
-    child_id UUID PRIMARY KEY REFERENCES children(id),
+    child_id TEXT PRIMARY KEY REFERENCES children(id),
     favorite_topics JSONB NOT NULL DEFAULT '[]'::jsonb,
     encouragement_style TEXT,
     attention_span_minutes SMALLINT,
@@ -45,8 +45,8 @@ CREATE TABLE topic_prompts (
 
 CREATE TABLE sessions (
     id UUID PRIMARY KEY,
-    child_id UUID NOT NULL REFERENCES children(id),
-    topic_id TEXT NOT NULL REFERENCES topics(id),
+    child_id TEXT NOT NULL,
+    topic_id TEXT NOT NULL,
     status TEXT NOT NULL,
     turn_count INTEGER NOT NULL DEFAULT 0,
     child_utterance_count INTEGER NOT NULL DEFAULT 0,
@@ -75,7 +75,7 @@ CREATE TABLE session_turn_summaries (
 );
 
 CREATE TABLE growth_profiles (
-    child_id UUID PRIMARY KEY REFERENCES children(id),
+    child_id TEXT PRIMARY KEY,
     current_speaking_level SMALLINT NOT NULL,
     recent_topics JSONB NOT NULL DEFAULT '[]'::jsonb,
     strengths JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -89,7 +89,7 @@ CREATE TABLE growth_profiles (
 
 CREATE TABLE training_plans (
     id UUID PRIMARY KEY,
-    child_id UUID NOT NULL REFERENCES children(id),
+    child_id TEXT NOT NULL,
     period_type TEXT NOT NULL,
     goals JSONB NOT NULL DEFAULT '[]'::jsonb,
     focus_topics JSONB NOT NULL DEFAULT '[]'::jsonb,

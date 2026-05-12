@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>儿童试用脚本 V1</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      color: #1f2328;
+      line-height: 1.65;
+      font-size: 14px;
+    }
+    h1, h2, h3 { line-height: 1.3; margin-top: 20px; }
+    h1 { font-size: 28px; margin-top: 0; }
+    h2 { font-size: 20px; border-bottom: 1px solid #d0d7de; padding-bottom: 6px; }
+    h3 { font-size: 16px; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f6f8fa;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+    p { margin: 10px 0; }
+    .note {
+      background: #f6f8fa;
+      border-left: 4px solid #0969da;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>儿童试用脚本 V1</h1>
+
+  <h2>目的</h2>
+  <p>本文件用于给当前 V1 主链路提供一份可重复执行的真实儿童试用脚本：</p>
+  <p><code>QQBot + Hermes + jiajiaoagent backend bridge</code></p>
+  <p>这份脚本服务于早期可行性验证，不是正式教学评估。</p>
+  <p>核心想验证 4 件事：</p>
+  <ol>
+    <li>孩子愿不愿意开口和这个英语陪练聊天？</li>
+    <li>孩子能不能在不依赖成人大量救援的情况下持续说上几轮？</li>
+    <li>哪些主题最容易带出口语流动感？</li>
+    <li>孩子主要卡在哪：词汇、信心、句子组织，还是注意力？</li>
+  </ol>
+
+  <h2>试用形式</h2>
+  <p>建议首轮试用时长：</p>
+  <ul><li><code>8 到 12 分钟</code></li></ul>
+  <p>建议参与者：</p>
+  <ul>
+    <li><code>1 个孩子</code></li>
+    <li><code>1 个家长或成人观察者</code></li>
+  </ul>
+  <p>建议设备与方式：</p>
+  <ul>
+    <li>孩子通过当前 QQ 机器人路径进行语音或文字互动</li>
+    <li>成人在旁边陪伴，但尽量不要代答</li>
+  </ul>
+
+  <h2>试用前检查</h2>
+  <ol>
+    <li>QQ bot 可以正常收到并回复消息</li>
+    <li>语音回复有声音</li>
+    <li>当前测试主题已确定</li>
+    <li>成人知道这不是考试</li>
+    <li>成人会以观察为主，而不是不停指导</li>
+  </ol>
+
+  <h2>家长开场引导词</h2>
+  <div class="note">我们现在要和一个英语聊天伙伴说说话。你不用说得很完美，只要大胆说就可以。如果有个词一下子想不起来，可以先说一点中文，再一起试着说成英文。</div>
+  <p>注意：</p>
+  <ul>
+    <li>不要说“要答对”</li>
+    <li>不要说“别说错”</li>
+    <li>不要把这件事说得像做作业</li>
+  </ul>
+
+  <h2>一轮试用算成功的标准</h2>
+  <ul>
+    <li>孩子至少说了 <code>4 到 6</code> 轮</li>
+    <li>孩子至少说出了 <code>2</code> 个完整句</li>
+    <li>孩子接受了至少一次句型支架或复说引导</li>
+    <li>孩子没有明显情绪关闭</li>
+    <li>成人感觉孩子大概率愿意再试一次</li>
+  </ul>
+
+  <h2>建议的首轮主题顺序</h2>
+  <ol>
+    <li><code>my-family</code></li>
+    <li><code>my-favorite-food</code></li>
+    <li><code>hobbies-and-play</code></li>
+  </ol>
+  <p>原因：</p>
+  <ul>
+    <li>都是孩子熟悉的生活内容</li>
+    <li>情绪安全</li>
+    <li>不需要太多知识负担</li>
+    <li>更容易从真实体验出发说话</li>
+  </ul>
+
+  <h2>建议的三段式试用流程</h2>
+  <h3>第一阶段：热启动</h3>
+  <p>时长：<code>2 到 3 分钟</code></p>
+  <p>目标：帮助孩子低压力开口</p>
+  <p>建议主题：<code>my-family</code> 或 <code>my-favorite-food</code></p>
+  <p>观察重点：</p>
+  <ul>
+    <li>孩子第一轮前犹豫多久</li>
+    <li>是单词回答、短语回答，还是句子回答</li>
+    <li>是愿意说、紧张、回避，还是有兴趣</li>
+  </ul>
+
+  <h3>第二阶段：引导扩展</h3>
+  <p>时长：<code>4 到 5 分钟</code></p>
+  <p>目标：看孩子能不能从单词回答慢慢过渡到短句</p>
+  <p>观察重点：</p>
+  <ul>
+    <li>孩子会不会接句型支架</li>
+    <li>能不能多补一个细节</li>
+    <li>能不能回答至少一个追问</li>
+    <li>卡词时中文救援能不能帮他重新继续说</li>
+  </ul>
+
+  <h3>第三阶段：轻收尾</h3>
+  <p>时长：<code>2 到 3 分钟</code></p>
+  <p>目标：在孩子仍然有一点成就感的时候结束</p>
+  <p>不要为了“多测一个主题”硬拖。更好的收尾方式是停在：</p>
+  <ul>
+    <li>一个说得不错的完整句</li>
+    <li>一次成功复说</li>
+    <li>一个积极、轻松的结束点</li>
+  </ul>
+
+  <h2>观察记录模板</h2>
+  <h3>基础信息</h3>
+  <ul>
+    <li>日期：</li>
+    <li>孩子年龄：</li>
+    <li>使用主题：</li>
+    <li>会话时长：</li>
+  </ul>
+  <h3>说话表现</h3>
+  <ul>
+    <li>第一反应属于哪种：不说 / 单词 / 短语 / 完整句</li>
+    <li>今天最好的一句话：</li>
+    <li>整体信心感受：低 / 中 / 高</li>
+  </ul>
+  <h3>卡点观察</h3>
+  <ul>
+    <li>主要困难：不敢开口 / 想不起词 / 组不成句子 / 注意力容易掉 / 怕说错</li>
+    <li>中文救援有没有帮助：有 / 没有 / 没用到</li>
+  </ul>
+  <h3>陪练质量观察</h3>
+  <ul>
+    <li>哪种回复孩子接得最好？</li>
+    <li>哪种回复听起来不自然？</li>
+    <li>哪种追问偏难？</li>
+    <li>从哪一轮开始对话变顺？</li>
+  </ul>
+  <h3>复用意愿</h3>
+  <ul>
+    <li>孩子明天还愿不愿意再试：愿意 / 可能愿意 / 大概率不愿意</li>
+  </ul>
+
+  <h2>哪些现象算好信号</h2>
+  <ul>
+    <li>孩子第 1、2 轮之后开口速度明显变快</li>
+    <li>孩子会先模仿句型，再自己加一点内容</li>
+    <li>孩子会笑、会主动继续接话</li>
+    <li>孩子会问“这个怎么说”而不是直接放弃</li>
+  </ul>
+
+  <h2>强预警信号</h2>
+  <ul>
+    <li>每轮都长时间沉默</li>
+    <li>成人必须频繁翻译或代答</li>
+    <li>追问一来孩子就卡住</li>
+    <li>一纠错孩子就更紧张</li>
+    <li>整体氛围越来越像口语考试</li>
+  </ul>
+
+  <h2>成人在现场的规则</h2>
+  <p>成人应该：</p>
+  <ul>
+    <li>鼓励努力</li>
+    <li>提供情绪安全感</li>
+    <li>让孩子自己先试</li>
+    <li>只有在真的卡住时再轻微救援</li>
+  </ul>
+  <p>成人不要：</p>
+  <ul>
+    <li>每轮纠发音</li>
+    <li>强调语法对错</li>
+    <li>拿学校表现做比较</li>
+    <li>把时长拖太久</li>
+  </ul>
+
+  <h2>试后快速决策规则</h2>
+  <h3>1. 继续照当前方式测</h3>
+  <p>适用情况：孩子愿意说、愿意接支架、情绪状态还不错。</p>
+
+  <h3>2. 继续，但降低难度</h3>
+  <p>适用情况：孩子愿意，但需要很多支撑；单词回答很多；中文救援帮助明显。</p>
+  <p>可做调整：</p>
+  <ul>
+    <li>先用更熟悉的主题</li>
+    <li>缩短追问链</li>
+    <li>增加二选一问题</li>
+    <li>更宽容地接受中英过渡</li>
+  </ul>
+
+  <h3>3. 暂停并重设计</h3>
+  <p>适用情况：孩子明显抗拒；整体感觉太像上课或考试；当前互动结构让孩子紧张。</p>
+  <p>可做调整：</p>
+  <ul>
+    <li>缩成 <code>5 分钟</code></li>
+    <li>先从爱好或食物主题开始</li>
+    <li>进一步减少纠错</li>
+    <li>让开场更轻松、更像聊天</li>
+  </ul>
+
+  <h2>建议的试用节奏</h2>
+  <ul>
+    <li>尽量对同一个孩子做 <code>3 到 5</code> 次短试用</li>
+    <li>不要只根据一次表现下结论</li>
+    <li>对比不同主题的反应差异</li>
+  </ul>
+
+  <h2>当前仓库的后续动作</h2>
+  <p>每次按这份脚本试完后，把关键信息写回：</p>
+  <ul>
+    <li><code>STATUS.md</code></li>
+    <li><code>TASKLIST.md</code></li>
+  </ul>
+  <p>如果发现稳定重复的问题，就把它转成后续改动：</p>
+  <ul>
+    <li>tutor reply 调整</li>
+    <li>topic pack 调整</li>
+    <li>turn strategy 调整</li>
+    <li>中英混杂支持调整</li>
+  </ul>
+</body>
+</html>

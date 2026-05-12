@@ -5,7 +5,7 @@ const TOPIC_PACK: Record<string, TopicContext> = {
     topicId: "my-family",
     title: "My Family",
     openingMessage:
-      "Hello! I am your English speaking buddy. Today we can talk about your family. Who is in your family?",
+      "Hello! I am your English speaking buddy. We can talk about anything you like. What do you want to chat about today?",
     communicationGoal: "Talk about family members and simple family activities.",
     speakingMoves: ["naming", "description", "detail"],
     keyVocabulary: ["mother", "father", "sister", "brother", "family"],
@@ -28,7 +28,7 @@ const TOPIC_PACK: Record<string, TopicContext> = {
     topicId: "my-school-day",
     title: "My School Day",
     openingMessage:
-      "Hello! Let's talk about your school day. What do you do first at school?",
+      "Hello! I am happy to chat with you today. What would you like to talk about?",
     communicationGoal: "Describe school routine, class life, and favorite school moments.",
     speakingMoves: ["description", "choice", "reason"],
     keyVocabulary: ["school", "teacher", "class", "friend", "homework"],
@@ -51,7 +51,7 @@ const TOPIC_PACK: Record<string, TopicContext> = {
     topicId: "my-friends",
     title: "My Friends",
     openingMessage:
-      "Hello! Let's talk about your friends. Who is your good friend?",
+      "Hello! We can start with anything you like. What do you want to say first?",
     communicationGoal: "Introduce a friend and say what you do together.",
     speakingMoves: ["naming", "description", "detail"],
     keyVocabulary: ["friend", "kind", "funny", "play", "share"],
@@ -74,7 +74,7 @@ const TOPIC_PACK: Record<string, TopicContext> = {
     topicId: "my-favorite-food",
     title: "My Favorite Food",
     openingMessage:
-      "Hello! Let's talk about food. What food do you like best?",
+      "Hello! I am ready to chat with you. What do you want to talk about first?",
     communicationGoal: "Talk about favorite foods, taste, and simple reasons.",
     speakingMoves: ["choice", "description", "reason"],
     keyVocabulary: ["food", "sweet", "salty", "rice", "fruit"],
@@ -97,7 +97,7 @@ const TOPIC_PACK: Record<string, TopicContext> = {
     topicId: "weather-and-clothes",
     title: "Weather and Clothes",
     openingMessage:
-      "Hello! Let's talk about the weather. How is the weather today?",
+      "Hello! We can chat like friends first. What is on your mind today?",
     communicationGoal: "Connect weather with daily choices and clothes.",
     speakingMoves: ["description", "choice", "reason"],
     keyVocabulary: ["sunny", "rainy", "cloudy", "jacket", "T-shirt"],
@@ -120,7 +120,7 @@ const TOPIC_PACK: Record<string, TopicContext> = {
     topicId: "hobbies-and-play",
     title: "Hobbies and Play",
     openingMessage:
-      "Hello! Let's talk about hobbies. What do you like to do after school?",
+      "Hello! Let's chat in English. You can start with any topic you like.",
     communicationGoal: "Talk about interests, play habits, and enjoyment.",
     speakingMoves: ["choice", "detail", "reason"],
     keyVocabulary: ["draw", "sing", "dance", "bike", "game"],
@@ -151,7 +151,7 @@ function buildFallbackTopicContext(topicId: string): TopicContext {
   return {
     topicId,
     title,
-    openingMessage: `Hello! Let's talk about ${title}. What can you tell me about it?`,
+    openingMessage: "Hello! We can talk about anything you like. What do you want to say first?",
     communicationGoal: `Talk about ${title} with one or two simple sentences.`,
     speakingMoves: ["description", "detail"],
     keyVocabulary: [],

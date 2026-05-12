@@ -2,7 +2,7 @@
 
 ## Project
 
-小学生英语口语陪练 Agent（Android 原型 + QQBot/Hermes MVP）
+小学生英语口语陪练 Agent（QQBot 主试用链路 + Android 原型保留）
 
 ## Workflow Stages
 
@@ -11,100 +11,97 @@
 Status: completed
 
 Output:
+
 - `docs/superpower/01-brainstorming.md`
 - `docs/superpower/01a-github-conventions.md`
 
 Summary:
+
 - 明确产品定位为面向小学生的英语口语陪练 Agent
 - 核心用户为孩子本人
 - 第一版必须支持语音输入与语音对话
 - 第一版重点是口语陪练、轻纠错、成长画像、训练计划
 - 第一版暂不包含作业拍照识别与试卷分析
-- 最早交付形态优先为 Android App
-- 当前已将首版试用主路径收敛到 `QQBot + Hermes + jiajiaoagent backend bridge`
-- 当前目标仍是验证可行性与儿童试用体验
-- 已补充仓库 GitHub 协作规范，作为进入开发计划前的基础约束
+- 最早交付形态最初优先为 Android App
+- 后续结合真实工程可行性，主试用路径收敛到 `QQBot + Hermes + jiajiaoagent backend bridge`
 
 ### 2. Writing Plans
 
 Status: completed
 
 Output:
+
 - `docs/superpower/02-mvp-development-plan.md`
 
-Scope to define:
-- MVP 功能清单
-- 用户流程
-- 页面结构
-- Agent 能力拆分
-- 技术方案
-- 迭代里程碑
-- 验证指标与风险
-
 Summary:
+
 - 已明确 MVP 范围与非范围
 - 已拆出主用户流程与核心功能模块
-- 已给出 Android 客户端与 Agent 服务的职责边界
-- 已定义实施里程碑、核心风险与验证指标
-- 下一步进入 implementation-prep，先做任务拆解与技术选型
+- 已定义实施里程碑、风险与验证指标
+- 已为早期实现阶段建立基本方向
 
 ### 3. Implementation Prep
 
 Status: completed
 
 Output:
-- 任务级拆解
-- 技术栈决策
-- 项目结构初始化方案
 
-Files:
 - `docs/superpower/03-implementation-prep.md`
 
 Summary:
-- 已将 MVP 拆成 foundation、client、voice、conversation、profile、trial 六条任务线
-- 已给出 Android、存储、STT、TTS、Agent 服务的首版技术建议
-- 已给出仓库结构建议与核心数据结构草案
-- 下一步进入 implementation，先完成项目结构初始化，再根据实际可行性收敛试用入口
+
+- 已把当前主路径正式校准为 `QQBot + NapCat + backend bridge + Hermes governance + LLM reply`
+- 已明确当前正式架构为 “LLM 主回复，Hermes 做治理层”
+- 已明确下一阶段重点不再是 transport 试错，而是 prompt、治理、记忆和试用闭环
+- 已把 Android 从“当前主线”调整为“保留原型资产”
 
 ### 4. Implementation
 
 Status: in progress
 
 Planned output:
-- 项目脚手架
-- Android 客户端
-- Agent 对话与记忆模块
-- 基础评估与训练计划逻辑
+
+- 可用的儿童口语陪练主链路
+- LLM 驱动的自然对话能力
+- Hermes 治理、会话控制、记忆更新能力
+- 基础试用和观察记录
 
 Current progress:
-- 已完成技术栈决策
-- 已完成项目目录骨架初始化
-- 已完成首版 API 与数据结构对齐文档
+
+- 已完成技术栈决策与项目骨架初始化
 - 已完成 Android 原型与 backend 的基础联调
-- 已完成 Hermes tutor bridge 骨架
-- 已确认微信 bot 不适合作为当前首版语音输出主路径
-- 已打通 `QQBot -> Hermes -> jiajiaoagent -> QQ 语音回复` 的可用闭环
-- 当前主线已回到“围绕口语陪练能力本身继续打磨”
+- 已验证微信 bot 路线不适合作为当前主语音输出路径
+- 已打通 `QQBot -> Hermes -> jiajiaoagent -> QQ 语音回复` 闭环
+- 已将主回复链路切到真实 LLM 调用
+- 已修正 `CPA1 + gpt-5.4` 非流式返回正文为空的问题，改为读取流式正文
+- 已新增 `llm_succeeded / llm_failed / llm_skipped` 可观察性日志
+- 已补上 `重新开始聊天` 等会话控制能力
+- 当前实现方向正式转为：让 LLM 负责“怎么说”，让 Hermes 负责“怎么管”
 
 Related files:
-- `docs/technical/01-tech-stack-decision.md`
-- `docs/technical/02-api-and-data-shapes.md`
+
+- `docs/technical/03-system-architecture.md`
+- `docs/technical/06-hermes-orchestration-modules.md`
 - `docs/technical/13-qqbot-v1-mainline.md`
-- `README.md`
+- `STATUS.md`
+- `TASKLIST.md`
 
 ### 5. Verification
 
 Status: in progress
 
 Planned output:
-- 可运行试用版本
-- 功能验证记录
-- MVP 试用反馈记录
+
+- 可持续试用的 V1 版本
+- 真实聊天质量反馈
+- 基于试用结果的 prompt / governance 迭代输入
 
 Current direction:
+
 - 以 QQBot 作为当前最低摩擦试用入口
-- 用真实语音对话验证孩子是否愿意持续开口
-- 在可用链路稳定后，再决定是否重启 Android 主入口路线
+- 优先验证孩子是否愿意持续说、系统是否能自然接话
+- 先修“出戏感”“脚本味”“节奏不自然”等关键体验问题
+- 通过真实试用结果决定下一轮治理边界和训练计划深度
 
 ## Notes
 

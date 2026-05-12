@@ -9,36 +9,37 @@
 
 ## Now
 
-- [ ] 验证 `1647127576`、`794618446` 是否稳定走 `autoribao`
-- [ ] 验证 `584201119`、`963028199` 是否稳定走 `jiajiaoagent`
-- [ ] 重新验证 `who are you`、`what can you do` 在 QQ 侧是否正常
-- [ ] 验证 `改成正常`、`说慢一点`、`说快一点` 这类语音控制指令在 QQ 侧是否稳定生效
-- [ ] 重新验证 `slow / normal / fast` 三档语速在 QQ 侧的实际听感
-- [ ] 重启 live NapCat 进程并验证新的默认 `normal` + 更大语速档位差是否生效
-- [ ] 记录 Android 原型当前可复用资产与暂停点
-- [ ] 扩充中英混杂容错的小词表与句型映射
-- [ ] 基于真实试用继续微调 tutor reply 的语气、追问密度和回合节奏
-- [ ] 基于真实试用继续细化 topic-specific turn strategy
-- [ ] 进行一次按试用脚本执行的真实儿童试用并记录观察
+- [ ] 连续进行 V1 live QQ 试用，确认文本 / 语音 / 家长报告链路在多轮消息下持续稳定
+- [ ] 设计真实试用观察表，记录“哪些回复自然、哪些回复尴尬、哪些追问能让孩子继续说”
+- [ ] 基于当前 planner 输出微调真实回复，避免“有规划但太像教学脚本”
+- [ ] 观察 `stage goal / session goal` 注入后，QQ 侧真实回复是否更稳定、更自然
+- [ ] 观察“理解难度自适应”在真实试聊里是否切换自然，不要一上来就过度中文托底
+- [ ] 观察 learner profile 注入后，live QQ 回复是否更像“越来越懂这个孩子”
+- [ ] 基于 `22-hidden-training-projection-v1` 继续微调 stageGoal / learnerProfile 到 runtime 行为的映射
+- [ ] 基于真实试聊微调家长报告的措辞、长度和信息密度
+- [ ] 接通真实 PostgreSQL 并执行 `npm run db:migrate`
+- [ ] 设计 children / topics 的 seed 或初始化策略
+- [ ] 基于 live QQ 试用验证当前 `quick intent` 收紧是否足够，必要时继续缩小范围
+- [ ] 基于 live QQ 试用验证当前 `wrap-up gating` 是否合适，必要时继续补条件
 
 ## Upcoming
 
-- [ ] 为 unmatched QQ 用户定义提示或静默忽略策略
-- [ ] 把技术文档中的“微信主线”表述逐步校准为“QQBot 主试用链路”
-- [ ] 记录 QQBot 相比微信 bot 的实现/维护差异
-- [ ] 完成首页、成长页、训练计划页基础结构细化
-- [ ] 打磨对话页消息流视觉层次与交互细节
-- [ ] 设计主题配置结构
-- [ ] 设计训练计划生成输入输出格式
-- [ ] 初始化数据库迁移或 schema 管理方式
+- [ ] 重新梳理 `quick intent`，只保留真正高频且值得走规则层的意图
+- [ ] 设计 `wrap-up gating rules`，避免 LLM 正常接话时被总结话术打断
+- [ ] 扩充中英混杂容错的小词表与句型映射
+- [ ] 细化“没听懂 / 卡壳 / 纯中文求助”三类信号的切换阈值
+- [ ] 基于 live 试聊继续微调 learner profile 的 stable trait 慢更新阈值
+- [ ] 基于真实试用继续微调 tutor reply 的语气、追问密度和回合节奏
+- [ ] 验证更自然的 `-1 / 0 / 1` 语速档在 QQ 实机听感是否稳定
+- [ ] 记录 Android 原型当前可复用资产与暂停点
 
 ## Later
 
-- [ ] 实现主题式语音对话主流程
+- [ ] 实现主题式语音对话主流程的长期画像闭环
 - [ ] 实现轻纠错与复说引导机制
-- [ ] 实现基础成长画像数据结构
 - [ ] 实现训练计划生成逻辑
-- [ ] 完成 MVP 试用版联调
+- [ ] 实现周度 / 月度教学规划闭环
+- [ ] 评估是否恢复 Android 作为正式主入口
 - [ ] 记录试用反馈并整理下一轮迭代方向
 
 ## Done
@@ -127,3 +128,35 @@
 - [x] 接入首版 TTS 三档语速配置
 - [x] 在 bridge 中接入首版语音/文本控制指令，用于切换 `slow / normal / fast` 语速
 - [x] 识别并修正默认语速已是 `slow` 导致“慢一点”体感无变化的问题
+- [x] 识别并开始修正“开场过早绑主题、像题库对话”的问题
+- [x] 修正 quick intent 误把 `white` 识别成 `hi` 的 false positive
+- [x] 修正孩子表达焦虑/紧张时仍被硬拐入预设主题的问题
+- [x] 查清 `CPA1 + gpt-5.4` 为何返回 200 但正文为空，并改为读取流式 chunk 正文
+- [x] 补上可观察的 `llm_succeeded / llm_failed / llm_skipped` 日志
+- [x] 为 QQ 单窗口补上 `重新开始聊天` 指令
+- [x] 修正 LLM 已成功回复但被 wrap-up 收尾话术覆盖的问题边界
+- [x] 明确当前正式架构方向为 “LLM 主回复、Hermes 做治理层”
+- [x] 将核心技术架构文档切到新方向
+- [x] 将 `docs/superpower/03-implementation-prep.md` 对齐到 “LLM 主回复、Hermes 做治理层”
+- [x] 将 `docs/superpower/00-workflow-status.md` 对齐到当前 QQBot 主试用链路
+- [x] 完成“教学规划 + 成长记录”功能层 brainstorming，并写入仓库文档
+- [x] 完成“阶段目标 + session 目标”机制设计初稿，并写入仓库文档
+- [x] 完成 `memory-update-engine / learning-planner / progress-evaluator` 的 V1 设计初稿
+- [x] 落 `memory update engine` 最小实现，并通过 `npm run check`
+- [x] 落 `progress evaluator / learning planner` 最小实现，并接入 runtime
+- [x] 完成 `LLM prompt contract / Hermes governance boundary` 文档
+- [x] 将 `quick intent` 收紧为更保守的独立短句匹配
+- [x] 为 `wrap-up` 补上首版显式 gating 规则
+- [x] 软化 planner 的 `weekly focus / session goal` 措辞，减少对 LLM 的脚本感牵引
+- [x] 接入首版“理解难度自适应”模式，并写入 prompt / strategy / memory / docs
+- [x] 完成“持续孩子画像系统 V1”设计初稿，并写入 `docs/technical/21-learner-profile-v1-design.md`
+- [x] 基于现有 `LearningSnapshot + SessionSummary` 接入首版 runtime learner profile 生成器
+- [x] 将 learner profile 软回注到 planner / prompt / strategy 运行时链路
+- [x] 补上 learner profile stable traits 的首版慢更新规则
+- [x] 完成“训练计划如何隐性投射到对话行为” V1 映射文档
+- [x] 完成 V1 家长报告结构设计
+- [x] 完成首版 parent report generator
+- [x] 支持 QQ 指令触发家长报告文字返回
+- [x] 接入 PostgreSQL learning memory repository 与 migration runner
+- [x] 形成 V1 阶段性完成度清单
+- [x] 修正 bridge CLI 在 Redis / PostgreSQL 正式模式下的资源收尾问题

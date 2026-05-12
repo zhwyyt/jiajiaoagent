@@ -22,7 +22,12 @@ export function buildPromptPayload(
     topicId: request.topicId,
     replyMode: strategy.replyMode,
     fallbackReplyText,
-    childLevel: childContext.currentSpeakingLevel
+    childLevel: childContext.currentSpeakingLevel,
+    comprehensionSupportMode: strategy.comprehensionSupportMode ?? "english-only",
+    stageGoal: strategy.stageGoal ?? null,
+    weeklyFocus: strategy.weeklyFocus ?? [],
+    sessionGoal: strategy.sessionGoal ?? null,
+    supportLevel: strategy.supportLevel ?? null
   };
 }
 
@@ -55,6 +60,14 @@ function buildFallbackReplyText(
     /\b(play|read|cook|watch|go|eat|sing|dance|walk|talk|study|help)\b/i.test(utterance);
   const mentionsFeeling =
     /\b(happy|fun|nice|kind|busy|great|good|sweet|friendly)\b/i.test(utterance);
+
+  if (strategy.replyMode === "open-chat") {
+    return buildOpenChatReply(request, utterance, lowerText, topicContext);
+  }
+
+  if (strategy.comprehensionSupportMode === "english-with-chinese-support") {
+    return "That is okay. We can go slowly. If you do not understand, I can help in Chinese too. 如果没听懂也没关系，我们可以慢慢来。";
+  }
 
   if (containsChinese) {
     return buildChineseBridgeReply(encouragingLead, utterance);
@@ -123,6 +136,113 @@ function buildFallbackReplyText(
     `Tell me a little more about ${topicContext.title}.`;
 
   return `${encouragingLead} ${followUpQuestion}`;
+}
+
+function buildOpenChatReply(
+  request: TurnRequest,
+  utterance: string,
+  lowerText: string,
+  topicContext: TopicContext
+): string {
+  const emotionalSupportReply = buildEmotionalSupportReply(utterance, lowerText);
+  if (emotionalSupportReply) {
+    return emotionalSupportReply;
+  }
+
+  const casualSegue = buildTopicSegue(request.turnIndex, topicContext);
+
+  if (/\bhow are you\b/i.test(lowerText)) {
+    return `I am good, thank you! I am happy to talk with you. How are you today?`;
+  }
+
+  if (/\bwhat('?s| is)\s+your name\b/i.test(lowerText)) {
+    return `My name is your English buddy. You can just call me your English friend. What is your name?`;
+  }
+
+  if (/\bwhere are you from\b/i.test(lowerText)) {
+    return `I am from the English world in your phone. I am here to chat with you and practice English together. ${casualSegue}`;
+  }
+
+  if (/\bhow old are you\b/i.test(lowerText)) {
+    return `I do not have a real age, but I am a friendly English buddy for kids. How old are you?`;
+  }
+
+  if (/\bdo you like\b/i.test(lowerText)) {
+    const object = utterance.replace(/^.*?\bdo you like\b\s*/i, "").replace(/\?+$/, "").trim();
+    if (object) {
+      return `Yes, I think ${object} is fun. What about you? Do you like ${object}?`;
+    }
+  }
+
+  if (/\bwhat('?s| is)\s+your favorite\b/i.test(lowerText)) {
+    return `I like many things, especially fun chats, stories, and games. What is your favorite thing?`;
+  }
+
+  if (/\bi am\b|\bmy name is\b|\bi like\b|\bi love\b|\bi have\b/i.test(lowerText)) {
+    return `Thank you for telling me. Tell me a little more about that. ${casualSegue}`;
+  }
+
+  if (/[?？]$/.test(utterance) || /^(what|who|where|when|why|how|do|does|did|can|are|is)\b/i.test(lowerText)) {
+    return `That is a good question. ${buildQuestionReply(lowerText)} ${casualSegue}`;
+  }
+
+  return `That sounds interesting. Tell me a little more. ${casualSegue}`;
+}
+
+function buildEmotionalSupportReply(utterance: string, lowerText: string): string | null {
+  const mentionsAnxiety =
+    /焦虑|紧张|害怕|不敢|不太敢|开不了口|不敢说|不想说|说不出来/u.test(utterance) ||
+    /\b(nervous|anxious|scared|afraid|shy|worried|stuck|can't speak|cannot speak)\b/i.test(lowerText);
+  const mentionsClassroom =
+    /课堂|上课|老师|同学|游戏|发言/u.test(utterance) ||
+    /\b(class|teacher|classroom|game|speak in class)\b/i.test(lowerText);
+  const mentionsEnglishDifficulty =
+    /英语|英文/u.test(utterance) ||
+    /\benglish\b/i.test(lowerText);
+
+  if (!mentionsAnxiety) {
+    return null;
+  }
+
+  if (mentionsClassroom || mentionsEnglishDifficulty) {
+    return "That is okay. Many kids feel nervous when they speak English. We can go very slowly. You can say just one short sentence first, and I will help you.";
+  }
+
+  return "That is okay. You do not need to say a lot right now. We can go one small step at a time. You can start with one short sentence, and I will help you.";
+}
+
+function buildQuestionReply(lowerText: string): string {
+  if (/\bwho\b/.test(lowerText)) {
+    return "I can answer simple questions and chat with you in English.";
+  }
+
+  if (/\bwhere\b/.test(lowerText)) {
+    return "I am here with you in this chat.";
+  }
+
+  if (/\bwhen\b/.test(lowerText)) {
+    return "It depends, but you can tell me more and I will chat with you about it.";
+  }
+
+  if (/\bwhy\b/.test(lowerText)) {
+    return "Sometimes there are many reasons, and I want to hear your idea too.";
+  }
+
+  if (/\bhow\b/.test(lowerText)) {
+    return "We can do it step by step together.";
+  }
+
+  return "I can chat about that with you.";
+}
+
+function buildTopicSegue(turnIndex: number, topicContext: TopicContext): string {
+  if (turnIndex <= 2) {
+    return "We can talk about anything you like first.";
+  }
+
+  const gentleTopicHint =
+    topicContext.followUpQuestions[0] ?? `We can also talk about ${topicContext.title.toLowerCase()} if you want.`;
+  return `We can also talk about ${topicContext.title.toLowerCase()} later. For example: ${gentleTopicHint}`;
 }
 
 function buildChineseBridgeReply(encouragingLead: string, utterance: string): string {

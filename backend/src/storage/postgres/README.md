@@ -1,9 +1,31 @@
-# PostgreSQL Integration Placeholder
+# PostgreSQL Integration
 
-This folder is reserved for the real PostgreSQL access layer.
+This folder contains the backend PostgreSQL access layer.
 
-Planned contents:
-- connection bootstrap
-- query helpers or ORM models
-- migration runner integration
-- repositories for child profile, topics, sessions, and plans
+Current contents:
+- `client.ts`: shared `pg` pool bootstrap
+- `profileRepository.ts`: child profile reads
+- `topicRepository.ts`: topic reads with local fallback
+- `sessionRepository.ts`: session lifecycle persistence
+- `learningMemoryRepository.ts`: Hermes learning memory persistence
+
+## Migrations
+
+Run:
+
+```bash
+npm run db:migrate
+```
+
+This applies all SQL files under `backend/db/migrations` and records them in
+`schema_migrations`.
+
+## Current persistence split
+
+- PostgreSQL:
+  - sessions
+  - learning session summaries
+  - learning snapshots
+  - learner profiles
+- Redis:
+  - active session state

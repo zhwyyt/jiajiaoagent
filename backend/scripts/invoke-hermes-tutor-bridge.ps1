@@ -29,6 +29,17 @@ $backendRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $tsxCliPath = Join-Path $backendRoot "node_modules\tsx\dist\cli.mjs"
 $scriptPath = Join-Path $PSScriptRoot '..\src\bridge\hermesTutorBridge.ts'
 
+if (-not $env:LLM_API_KEY -and -not $env:GLM_API_KEY) {
+    try {
+        $wslKey = wsl.exe -d Ubuntu bash -lc "grep '^GLM_API_KEY=' ~/.hermes/.env | head -n 1 | cut -d= -f2-" 2>$null
+        if ($wslKey) {
+            $env:GLM_API_KEY = $wslKey.Trim()
+        }
+    } catch {
+        # Keep going. The bridge will fall back to template replies if no LLM key is available.
+    }
+}
+
 if (-not (Test-Path -LiteralPath $tsxCliPath)) {
     throw "tsx CLI not found: $tsxCliPath"
 }

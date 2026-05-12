@@ -2,197 +2,278 @@
 
 ## Project
 
-小学生英语口语陪练 Agent（Android MVP）
+小学生英语口语陪练 Agent（QQBot / Android 原型 / Hermes V1）
 
-## 1. Architecture Goal
+## 1. Architecture Direction
 
-在保持第一版实现可控的前提下，采用适合后续扩展的架构：
+当前项目正式切换到：
 
-- 前端专注孩子端体验
-- 后端专注业务接口
-- Hermes 专注 agent orchestration
-- PostgreSQL 负责长期学习数据
-- Redis 负责短期会话态与协调
+**LLM 主回复 + Hermes 治理层 + 教学规划层 + 持续画像与训练记录**
 
-第一版重点仍然是本项目当前定义的 Android 口语陪练 MVP，而不是一次性把全部教育能力做全。
+这意味着：
 
-## 2. High-Level Components
+- 大模型负责每一轮“怎么说”
+- Hermes / backend 负责“该不该这样说”
+- 教学规划层负责“接下来一段时间该练什么”
+- PostgreSQL 负责长期记忆
+- Redis 负责短期会话态
+- 客户端 / QQBot 负责交互入口和语音体验
 
-### Android App
+本项目不再继续沿“规则主导回复、模型只做少量补充”的方向扩展。
+
+## 2. Core Architecture Principle
+
+### 2.1 What LLM Should Own
+
+LLM 应负责：
+
+- 理解孩子当前这句话真正想表达什么
+- 生成自然、像人、符合孩子年龄段的回复
+- 接住情绪、卡壳、紧张、尴尬、好奇、闲聊
+- 支持中英混输理解
+- 在正常聊天里柔和地引导到练习主题
+
+### 2.2 What Hermes / Rules Should Own
+
+Hermes 和规则层应负责：
+
+- quick intent 与命令类处理
+- 会话生命周期控制
+- session reset / restart
+- 画像更新
+- 训练重点注入
+- 输出风格边界
+- 安全与儿童适配边界
+- 训练计划和总结触发
+
+### 2.3 What Education Planning Should Own
+
+教育规划层应负责：
+
+- 周目标 / 月目标定义
+- 当前阶段最该优先解决的问题排序
+- topic、句型、表达能力的训练优先级
+- 哪些错误先放过，哪些错误要反复打
+- 训练强度、纠错强度、推进节奏
+- 阶段性进步评估
+
+一句话说：
+
+**LLM 决定这一句怎么说，规划层决定这一阶段该练什么。**
+
+一句话说：
+
+**LLM 是对话大脑，Hermes 是编排、记忆和护栏。**
+
+## 3. High-Level Components
+
+### Client / Transport Layer
+
+当前包括：
+
+- QQBot / NapCat 主试用入口
+- Android 原型入口（保留）
 
 负责：
-- 首页、对话页、成长页、训练计划页
-- 录音、语音播放
-- 首版 STT / TTS provider 封装
-- 会话消息展示
-- 训练计划与成长结果展示
 
-## Voice IO Decision
+- 文本和语音收发
+- STT / TTS 接入
+- 消息展示与播放
+- 基础交互控件
 
-MVP 语音方案定为：
-
-- STT: Android `SpeechRecognizer`
-  - 优先 on-device
-  - 无 on-device 时回退系统默认 recognizer
-- TTS: Android `TextToSpeech`
-  - 优先英语 voice / locale
-  - 失败时回退到可用英文配置
-
-原因：
-- 第一版先验证孩子是否愿意持续口语对话
-- 避免过早引入云端语音服务、音频上传链路和额外成本
-- 保持 Android 端可以独立完成语音输入输出闭环
-
-### Backend API Service
+### Backend API / Bridge Layer
 
 负责：
-- 对外提供 HTTP API
-- 校验请求
-- 组织 Hermes 调用
-- 读取和写入 PostgreSQL / Redis
-- 返回客户端可消费的数据结构
 
-### Hermes Orchestration Layer
+- 对外 HTTP / bridge 入口
+- sender 级 session 维护
+- 命令识别（如语速、重新开始聊天）
+- 调用 Hermes orchestration
+- 调用 LLM
+- 返回最终可发送结果
+
+### Hermes Governance Layer
 
 负责：
-- 会话路由
-- 教学状态控制
-- 记忆注入
-- 主题与难度控制
-- 轻纠错策略执行
-- 会话结束后的摘要与训练计划触发
 
-### PostgreSQL
+- route / session 决策
+- child profile 注入
+- topic context 注入
+- correction / difficulty / pacing 策略
+- wrap-up 与 plan trigger
 
-负责持久化：
+Hermes 不再作为“主要嘴替”，而是作为：
+
+- conversation governance
+- memory coordination
+- learning-state control
+
+### Education Planning Layer
+
+负责：
+
+- 根据近期 session summary 和 issue tags 生成训练重点
+- 维护周度 / 月度 focus areas
+- 决定下一阶段优先练哪些 topic、句型、表达动作
+- 决定当前孩子更需要自由开口、复说强化，还是轻纠错提升
+- 给 Hermes 提供可执行的 teaching focus
+
+它不是前台聊天者，而是后台的“小型教学大脑”。
+
+### LLM Reply Layer
+
+负责：
+
+- 生成主回复
+- 在上下文中自然接话
+- 根据策略做轻引导
+- 尽量避免脚本味、考试味和模板味
+
+### Memory Layer
+
+#### PostgreSQL
+
+负责长期数据：
+
 - child profile
 - topic definitions
 - session summaries
 - growth profile snapshots
 - training plans
+- issue history / speaking bottlenecks
 
-### Redis
+#### Redis
 
 负责短期状态：
+
 - active session context
-- transient turn state
-- short-lived orchestration memory
-- retry / idempotency assistance
-- optional queue or async coordination in later phases
-
-## 3. Hermes Role in MVP
-
-虽然上午的讨论里提过多 Agent 结构，但当前项目第一版应收敛为“主链路优先”。
-
-第一版建议 Hermes 主要承载以下逻辑：
-
-1. `Conversation flow`
-   - 主题进入
-   - 回合推进
-   - 追问选择
-   - 会话收束
-
-2. `Memory injection`
-   - 注入孩子当前 level
-   - 注入最近常错点
-   - 注入当前训练重点
-
-3. `Correction strategy`
-   - 控制每轮是否纠错
-   - 只突出 1 个重点
-   - 决定是否改为提示支架
-
-4. `Session wrap-up`
-   - 生成 session summary
-   - 更新 growth profile
-   - 触发 training plan refresh
-
-## 4. Agent Boundary for MVP
-
-第一版不建议过早把所有能力拆成很多独立可部署 Agent。
-
-建议先在 Hermes 内部按逻辑模块划分：
-
-- `conversation agent logic`
-- `memory agent logic`
-- `planner agent logic`
-
-暂不把以下能力做成 MVP 主链路：
-- homework agent
-- assessment agent
-- parent report agent
-
-它们可以作为后续扩展目标保留，但不应分散第一版实现重点。
-
-## 5. Request Flow
-
-### Conversation Turn Flow
-
-1. Android 发送会话轮次请求到 backend
-2. backend 从 Redis 读取 active session context
-3. backend 读取 PostgreSQL 中的 child profile / topic config
-4. backend 调用 Hermes orchestration
-5. Hermes 生成回复策略、纠错策略和下一步动作
-6. backend 将 turn result 返回 Android
-7. 会话结束时写入 session summary，并更新 profile / plan
-
-## 6. Data Ownership
-
-### Durable Data in PostgreSQL
-
-- child profile
-- topic configuration
-- session summaries
-- growth profile snapshots
-- generated training plans
-
-### Ephemeral Data in Redis
-
-- active session
 - current turn counters
-- temporary orchestration context
-- partial turn memory
+- temporary orchestration state
+- current difficulty / pacing state
+- transient restart / wrap-up control
 
-### Local Android State
+## 4. Educational Time Scales
 
-- UI state
-- recent display cache
-- local settings
-- optional lightweight progress cache
+这个项目不能只按“每句怎么回”来设计，而应同时覆盖三个时间尺度：
 
-## 7. Why Database and Redis Matter Now
+### 4.1 Turn-Level Conversation
 
-即使第一版目标是快速验证，也不建议把这些完全留空。
+负责：
 
-原因：
-- 孩子端学习需要跨会话连续性
-- 画像和训练计划依赖历史数据
-- Hermes orchestration 需要短期 session state
-- 后续语音、作业、周报能力都会建立在现有数据模型上
+- 这一句怎么接
+- 是否先共情
+- 是否轻纠错
+- 是否追问
 
-所以在 implementation 初期就先定：
-- PostgreSQL 做长期数据
-- Redis 做短期状态
+### 4.2 Session-Level Teaching
 
-这样实现时不会来回改边界。
+负责：
 
-## 8. MVP Non-Goals at Architecture Level
+- 这一整次对话主要练什么
+- 这次应该偏自然聊天还是偏结构化引导
+- 本次最值得重复强化的句型或表达动作是什么
 
-第一版暂不追求：
+### 4.3 Week / Month-Level Planning
+
+负责：
+
+- 这一阶段孩子最该提升什么
+- 当前优先解决“不开口”“句子太短”“不会展开”“依赖中文桥接”中的哪一个
+- 下一周或本月应多出现哪些话题和表达模式
+
+## 5. Conversation Request Flow
+
+### Turn Flow
+
+1. QQ / Android 把新消息发到 backend bridge
+2. bridge 识别命令类输入（如 `重新开始聊天`、语速切换）
+3. backend 读取 Redis 会话态
+4. backend 读取 PostgreSQL 中的画像和主题上下文
+5. backend 读取当前阶段 teaching focus / active plan
+6. Hermes 决定当前回合治理策略
+7. backend 调用 LLM 生成主回复
+8. Hermes / backend 对回复做边界控制与必要后处理
+9. backend 返回文本、语音和日志信息
+10. 必要时更新画像、session summary、训练建议
+
+## 6. Planning Flow
+
+### Planning Flow
+
+1. session 结束或达到阶段触发条件
+2. system 生成或更新 session summary
+3. memory layer 抽取 issue tags、strengths、bottlenecks
+4. planner 生成当前周度 / 月度 focus
+5. planner 输出 teaching priorities 给后续 session 使用
+6. Hermes 在后续回合中注入这些 focus，但不把对话变成生硬脚本
+
+## 7. Rule Boundary
+
+规则层继续保留，但只保留以下几类：
+
+1. `Command rules`
+   - 重新开始聊天
+   - 语速切换
+   - 只说英文 / 中文解释（后续可加）
+
+2. `Safety rules`
+   - 儿童内容边界
+   - 明显不合适内容兜底
+
+3. `Session rules`
+   - 会话重置
+   - wrap-up 触发
+   - turn count / session age
+
+4. `Memory rules`
+   - 焦虑、卡壳、开不了口等标签记录
+   - 训练重点和常见问题更新
+
+5. `Output constraints`
+   - 回复不宜过长
+   - 一次最多一个简单追问
+   - 不要太像考试
+
+项目不再继续扩展大量“如果用户说 A，就固定回复 B”的主回复模板。
+
+## 8. Why This Direction Fits the Product
+
+这是一个儿童长期英语陪练产品，不是流程机器人。
+
+这个场景最重要的是：
+
+- 自然接话
+- 真实理解
+- 情绪承接
+- 长期个性化
+- 柔和引导
+
+这些能力主要依赖 LLM；而跨会话连续性、训练结构化和阶段性教学规划，则更适合由 Hermes、规划层和数据层承担。
+
+## 9. Near-Term Non-Goals
+
+当前仍不追求：
+
 - 微服务拆分
+- 复杂多 agent 互相博弈
 - 复杂事件总线
-- 复杂权限系统
-- 多租户
 - 高并发优化
+- 过重的规则系统
 
 优先级仍然是：
-- 快速开发
-- 主链路稳定
-- 孩子试用反馈有效
 
-## 9. Next Architecture Step
+- 主回复自然
+- 语音体验稳定
+- 画像记录有效
+- 教学规划可落地
+- 孩子真实试用不出戏
 
-下一步建议补两类内容：
+## 10. Next Architecture Step
 
-1. PostgreSQL schema draft
-2. Hermes orchestration module draft
+下一阶段建议围绕以下内容展开：
+
+1. 明确 LLM prompt contract
+2. 明确 Hermes 策略输入输出边界
+3. 设计 child profile / issue memory 更新规则
+4. 设计教育规划层的输入输出
+5. 设计 wrap-up / weekly focus / monthly plan 的协同方式

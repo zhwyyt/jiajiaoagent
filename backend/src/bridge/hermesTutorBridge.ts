@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { encode as encodeSilk, getWavFileInfo } from "silk-wasm";
+import type { AppContainer } from "../bootstrap/container.js";
 import {
+  buildParentReportResponse,
   buildStartSessionResponse,
   buildTurnResponse
 } from "../services/sessionService.js";
@@ -56,6 +58,14 @@ interface BridgeReplyPayload {
     durationMs?: number;
     playtimeSeconds?: number;
   }>;
+}
+
+interface RestartChatCommand {
+  replyText: string;
+}
+
+interface ParentReportCommand {
+  normalized: string;
 }
 
 const DEFAULT_TOPIC_ID = "my-family";
@@ -180,8 +190,8 @@ function toWslPath(filePath: string): string {
 
 function loadTtsVoiceConfig(): { presetName: string; rate: number } {
   const fallback = {
-    presetName: "slow",
-    rate: -2
+    presetName: "normal",
+    rate: 0
   };
 
   try {
@@ -240,6 +250,7 @@ function parseSpeechRateCommand(text: string): { presetName: string; replyText: 
     "改成慢速",
     "调慢",
     "说慢一点",
+    "再慢一点",
     "慢一点",
     "用慢速",
     "slow speed",
@@ -250,6 +261,7 @@ function parseSpeechRateCommand(text: string): { presetName: string; replyText: 
   const normalPatterns = [
     "改成正常",
     "改回正常",
+    "恢复正常",
     "正常语速",
     "正常一点",
     "用正常",
@@ -262,6 +274,7 @@ function parseSpeechRateCommand(text: string): { presetName: string; replyText: 
     "改成快速",
     "调快",
     "说快一点",
+    "再快一点",
     "快一点",
     "用快速",
     "fast speed",
@@ -289,6 +302,59 @@ function parseSpeechRateCommand(text: string): { presetName: string; replyText: 
       presetName: "fast",
       replyText: "Okay, I will speak a little faster now."
     };
+  }
+
+  return null;
+}
+
+function parseRestartChatCommand(text: string): RestartChatCommand | null {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const restartPatterns = [
+    "重新开始聊天",
+    "重新开始",
+    "重新聊",
+    "重新开聊",
+    "重新来",
+    "开始新聊天",
+    "开始新的聊天",
+    "new chat",
+    "start over",
+    "restart chat",
+    "reset chat"
+  ];
+
+  if (restartPatterns.some((pattern) => normalized.includes(pattern))) {
+    return {
+      replyText: "Okay, let's start a new chat now."
+    };
+  }
+
+  return null;
+}
+
+function parseParentReportCommand(text: string): ParentReportCommand | null {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const patterns = [
+    "家长报告",
+    "学习报告",
+    "成长报告",
+    "本周报告",
+    "报告",
+    "parent report",
+    "learning report",
+    "progress report"
+  ];
+
+  if (patterns.some((pattern) => normalized === pattern || normalized.includes(pattern))) {
+    return { normalized };
   }
 
   return null;
@@ -472,7 +538,7 @@ function buildTurnReplyPayload(
 async function ensureSession(
   input: BridgeInput,
   state: BridgeState,
-  createContainer: typeof import("../bootstrap/container.js").createContainer
+  createContainer: () => Promise<AppContainer>
 ) {
   const senderKey = buildSenderKey(input);
   const existing = state.sessionsBySender[senderKey];
@@ -529,6 +595,22 @@ async function ensureSession(
   };
 }
 
+async function restartSession(
+  input: BridgeInput,
+  state: BridgeState,
+  createContainer: () => Promise<AppContainer>
+) {
+  const senderKey = buildSenderKey(input);
+  delete state.sessionsBySender[senderKey];
+  saveState(state);
+  appendBridgeLog({
+    type: "session_reset",
+    senderKey
+  });
+
+  return ensureSession(input, state, createContainer);
+}
+
 async function run() {
   const args = parseArgs(process.argv.slice(2));
   const input = decodeInput(args);
@@ -537,124 +619,211 @@ async function run() {
     process.env.MOCK_STORAGE = "true";
   }
 
-  const { createContainer } = await import("../bootstrap/container.js");
+  const { createContainer: createBaseContainer } = await import("../bootstrap/container.js");
+  const activeContainers: AppContainer[] = [];
 
-  if (!input.senderId) {
-    throw new Error("senderId is required");
-  }
+  const createTrackedContainer = async (): Promise<AppContainer> => {
+    const container = await createBaseContainer();
+    activeContainers.push(container);
+    return container;
+  };
 
-  const state = loadState();
-  const { senderKey, session, openingPayload } = await ensureSession(input, state, createContainer);
+  try {
+    if (!input.senderId) {
+      throw new Error("senderId is required");
+    }
 
-  if (!input.text) {
-    const responsePayload = await attachVoiceFile(
-      openingPayload ?? buildOpeningReplyPayload({
+    const state = loadState();
+    const restartChatCommand = input.text ? parseRestartChatCommand(input.text) : null;
+    const parentReportCommand = !restartChatCommand && input.text ? parseParentReportCommand(input.text) : null;
+    const sessionBundle = restartChatCommand
+      ? await restartSession(input, state, createTrackedContainer)
+      : await ensureSession(input, state, createTrackedContainer);
+    const { senderKey, session, openingPayload } = sessionBundle;
+
+    if (!input.text) {
+      const responsePayload = await attachVoiceFile(
+        openingPayload ?? buildOpeningReplyPayload({
+          sessionId: session.sessionId,
+          topicId: session.topicId,
+          openingMessage: session.recentTurns[0]?.text || "",
+          suggestedReplyMode: "simple-question"
+        }),
+        senderKey,
+        "opening",
+        session.speechRatePreset
+      );
+      appendBridgeLog({
+        type: "opening_reply",
+        senderKey,
         sessionId: session.sessionId,
         topicId: session.topicId,
-        openingMessage: session.recentTurns[0]?.text || "",
-        suggestedReplyMode: "simple-question"
-      }),
-      senderKey,
-      "opening",
-      session.speechRatePreset
+        replyText: responsePayload.replyText,
+        files: responsePayload.files ?? []
+      });
+      process.stdout.write(`${JSON.stringify(responsePayload, null, 2)}\n`);
+      return;
+    }
+
+    const container = await createTrackedContainer();
+    const nextTurnIndex = session.turnIndex + 1;
+    const speechRateCommand = parseSpeechRateCommand(input.text);
+
+    if (restartChatCommand) {
+      const openingText = openingPayload?.replyText ?? session.recentTurns[0]?.text ?? restartChatCommand.replyText;
+      const payload = await attachVoiceFile(
+        {
+          ok: true,
+          handled: true,
+          replyText: `${restartChatCommand.replyText} ${openingText}`.trim(),
+          sessionId: session.sessionId,
+          topicId: session.topicId,
+          promptHint: "You can start with any question or topic you like.",
+          shouldPlayTts: true,
+          isSessionComplete: false,
+          correction: {
+            enabled: false,
+            focus: null,
+            mode: "none"
+          }
+        },
+        senderKey,
+        "restart",
+        session.speechRatePreset
+      );
+
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+
+    if (speechRateCommand) {
+      session.speechRatePreset = speechRateCommand.presetName;
+      session.updatedAt = new Date().toISOString();
+      state.sessionsBySender[senderKey] = session;
+      saveState(state);
+
+      const payload = await attachVoiceFile(
+        {
+          ok: true,
+          handled: true,
+          replyText: speechRateCommand.replyText,
+          sessionId: session.sessionId,
+          topicId: session.topicId,
+          promptHint: "You can change the speed again by saying slow, normal, or fast.",
+          shouldPlayTts: true,
+          isSessionComplete: false,
+          correction: {
+            enabled: false,
+            focus: null,
+            mode: "none"
+          }
+        },
+        senderKey,
+        `speed-${speechRateCommand.presetName}`,
+        session.speechRatePreset
+      );
+
+      appendBridgeLog({
+        type: "speech_rate_changed",
+        senderKey,
+        sessionId: session.sessionId,
+        topicId: session.topicId,
+        presetName: speechRateCommand.presetName
+      });
+
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+
+    if (parentReportCommand) {
+      const reportResponse = await buildParentReportResponse(
+        {
+          childId: input.childId || DEFAULT_CHILD_ID,
+          topicId: session.topicId || input.topicId || DEFAULT_TOPIC_ID,
+          sessionId: session.sessionId
+        },
+        container
+      );
+
+      const payload = buildTurnReplyPayload(session.sessionId, session.topicId, reportResponse);
+      appendBridgeLog({
+        type: "parent_report_reply",
+        senderKey,
+        sessionId: session.sessionId,
+        topicId: session.topicId,
+        inputText: input.text,
+        replyText: reportResponse.agentReplyText
+      });
+      process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      return;
+    }
+
+    session.recentTurns.push({ speaker: "child", text: input.text });
+
+    const turn = await buildTurnResponse(
+      {
+        sessionId: session.sessionId,
+        topicId: session.topicId,
+        turnIndex: nextTurnIndex,
+        childUtteranceText: input.text,
+        recentTurns: session.recentTurns
+      },
+      container
     );
-    appendBridgeLog({
-      type: "opening_reply",
-      senderKey,
-      sessionId: session.sessionId,
-      topicId: session.topicId,
-      replyText: responsePayload.replyText,
-      files: responsePayload.files ?? []
-    });
-    process.stdout.write(`${JSON.stringify(responsePayload, null, 2)}\n`);
-    return;
-  }
 
-  const container = await createContainer();
-  const nextTurnIndex = session.turnIndex + 1;
-  const speechRateCommand = parseSpeechRateCommand(input.text);
-
-  if (speechRateCommand) {
-    session.speechRatePreset = speechRateCommand.presetName;
+    session.turnIndex = nextTurnIndex;
+    session.recentTurns.push({ speaker: "agent", text: turn.agentReplyText });
     session.updatedAt = new Date().toISOString();
-    state.sessionsBySender[senderKey] = session;
+
+    if (turn.isSessionComplete) {
+      delete state.sessionsBySender[senderKey];
+    } else {
+      state.sessionsBySender[senderKey] = session;
+    }
     saveState(state);
 
     const payload = await attachVoiceFile(
-      {
-        ok: true,
-        handled: true,
-        replyText: speechRateCommand.replyText,
-        sessionId: session.sessionId,
-        topicId: session.topicId,
-        promptHint: "You can change the speed again by saying slow, normal, or fast.",
-        shouldPlayTts: true,
-        isSessionComplete: false,
-        correction: {
-          enabled: false,
-          focus: null,
-          mode: "none"
-        }
-      },
+      buildTurnReplyPayload(session.sessionId, session.topicId, turn),
       senderKey,
-      `speed-${speechRateCommand.presetName}`,
+      `turn-${nextTurnIndex}`,
       session.speechRatePreset
     );
-
     appendBridgeLog({
-      type: "speech_rate_changed",
+      type: "turn_reply",
       senderKey,
-      sessionId: session.sessionId,
-      topicId: session.topicId,
-      presetName: speechRateCommand.presetName
-    });
-
-    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    return;
-  }
-
-  session.recentTurns.push({ speaker: "child", text: input.text });
-
-  const turn = await buildTurnResponse(
-    {
       sessionId: session.sessionId,
       topicId: session.topicId,
       turnIndex: nextTurnIndex,
-      childUtteranceText: input.text,
-      recentTurns: session.recentTurns
-    },
-    container
-  );
+      inputText: input.text,
+      replyText: turn.agentReplyText,
+      source: turn.source ?? "fallback",
+      isSessionComplete: turn.isSessionComplete,
+      files: payload.files ?? []
+    });
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  } finally {
+    const shutdownErrors: string[] = [];
 
-  session.turnIndex = nextTurnIndex;
-  session.recentTurns.push({ speaker: "agent", text: turn.agentReplyText });
-  session.updatedAt = new Date().toISOString();
+    while (activeContainers.length > 0) {
+      const container = activeContainers.pop();
+      if (!container) {
+        continue;
+      }
 
-  if (turn.isSessionComplete) {
-    delete state.sessionsBySender[senderKey];
-  } else {
-    state.sessionsBySender[senderKey] = session;
+      try {
+        await container.shutdown();
+      } catch (error: unknown) {
+        shutdownErrors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    if (shutdownErrors.length > 0) {
+      appendBridgeLog({
+        type: "bridge_shutdown_error",
+        errors: shutdownErrors
+      });
+    }
   }
-  saveState(state);
-
-  const payload = await attachVoiceFile(
-    buildTurnReplyPayload(session.sessionId, session.topicId, turn),
-    senderKey,
-    `turn-${nextTurnIndex}`,
-    session.speechRatePreset
-  );
-  appendBridgeLog({
-    type: "turn_reply",
-    senderKey,
-    sessionId: session.sessionId,
-    topicId: session.topicId,
-    turnIndex: nextTurnIndex,
-    inputText: input.text,
-    replyText: turn.agentReplyText,
-    isSessionComplete: turn.isSessionComplete,
-    files: payload.files ?? []
-  });
-  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
 run().catch((error: unknown) => {

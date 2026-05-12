@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "check": "tsc --noEmit -p tsconfig.json",
-    "bridge:hermes": "tsx src/bridge/hermesTutorBridge.ts"
+    "bridge:hermes": "tsx src/bridge/hermesTutorBridge.ts",
+    "db:migrate": "tsx src/scripts/migratePostgres.ts"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

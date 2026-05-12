@@ -12,3 +12,18 @@ export function getRedisClient(): RedisClientType {
 
   return client;
 }
+
+export async function closeRedisClient(): Promise<void> {
+  if (!client) {
+    return;
+  }
+
+  const activeClient = client;
+  client = null;
+
+  if (!activeClient.isOpen) {
+    return;
+  }
+
+  await activeClient.quit();
+}

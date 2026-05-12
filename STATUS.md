@@ -35,6 +35,7 @@
 - `docs/technical/22-hidden-training-projection-v1.md`
 - `docs/technical/23-parent-report-v1-design.md`
 - `docs/technical/24-v1-completion-checklist.md`
+- `docs/technical/25-v1-stage-summary.md`
 
 ## What Is Done
 
